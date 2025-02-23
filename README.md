@@ -128,7 +128,7 @@ public class TesteController {
   ```
   git add .
   git commit -m "Configuração inicial do projeto"
-  git push -u origin nome-da-branch
+  git push 
   ```
 
 13. **Crie o Pull Request no GitHub**  
