@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/pagamentos")
 public class TesteController {
     
+    // Teste de API de pagamentos
     @RequestMapping("/teste")
     public String teste() {
         return "Teste de API de pagamentos";
     }
-
 }
