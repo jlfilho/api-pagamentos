@@ -338,5 +338,10 @@ git pull
 
 ---
 
-### 13. Lançamento da Release v1.0.0
+### 13. Faça o fechamento do Milestone 1: Setup e Entidades
+ - No Github faça o fechamento do Milestone 1: Setup e Entidades 
+
+---
+
+### 14. Lançamento da Release v1.0.0
  - Faça o Release v1.0.0, documente o Release Note  
