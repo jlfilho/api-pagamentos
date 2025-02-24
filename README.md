@@ -330,8 +330,13 @@ git push
 - Em seguida, abra um Pull Request (PR) na branch de destino, descrevendo as alterações realizadas. Certifique-se de que o PR esteja de acordo com as diretrizes do projeto para revisão e integração.
 
 ### 12. Sincronize a branch main do diretório local
-- No diretório local, retorn para a branch main e atualize com o diretório remoto.
+- No diretório local, retorne para a branch main e atualize com o diretório remoto.
 ```
 git checkout main
 git pull
 ```
+
+---
+
+### 13. Lançamento da Release v1.0.0
+ - Faça o Release v1.0.0, documente o Release Note  
