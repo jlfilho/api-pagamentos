@@ -142,3 +142,10 @@ public class TesteController {
 
   - Seus colegas (ou você mesmo) podem revisar o código e fazer comentários.
   - Quando o PR for aprovado, você (ou alguém com permissões adequadas) pode fazer o merge (união) do PR na branch de destino.
+
+14. **Sincronize a branch main do diretório local**
+   - No diretório local, retorn para a branch main e atualize com o diretório remoto.
+   ```
+   git checkout main
+   git pull
+   ``` 
