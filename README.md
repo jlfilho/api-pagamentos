@@ -1,144 +1,337 @@
-# 1. Configuração inicial do projeto
+# 2. Criação das entidades e mapeamento
 
-**Passo a passo para a configuração inicial do projeto**  
+**Detalhamento da branch: 2. Criação das entidades e mapeamento (com Lombok)**
 
-1. **Instalar o JDK Amazon Corretto 17**  
-   - Acesse o site oficial da Amazon Corretto (https://aws.amazon.com/corretto/).  
-   - Baixe a versão correspondente ao seu sistema operacional (Windows, Linux ou macOS).  
-   - Faça a instalação seguindo as instruções do assistente (no Windows) ou utilize os comandos adequados no Linux/macOS.  
-   - Verifique a instalação abrindo o terminal/prompt de comando e executando `java -version`.  
+A proposta desta branch é implementar as entidades principais do projeto (`Categoria`, `Pessoa`, `Endereco` e `Lancamento`), definindo suas classes de modelo e mapeamentos para o banco de dados **utilizando as anotações do Lombok** para reduzir a quantidade de código boilerplate (getters, setters, construtores etc.).
 
-2. **Instalar o Git**  
-   - Acesse o site oficial do Git (https://git-scm.com/downloads).  
-   - Baixe o instalador para o seu sistema operacional.  
-   - Conclua a instalação e configure suas credenciais (nome e e-mail) no Git:  
-     ```
-     git config --global user.name "Seu Nome"
-     git config --global user.email "seu_email@exemplo.com"
-     ```  
-   - Verifique a instalação executando `git --version` no terminal/prompt de comando.  
+---
+### 1. Estrutura dos pacotes
+   - Inclua a seguinte dependência no pom.xml 
 
-3. **Instalar o Visual Studio Code (VS Code)**  
-   - Acesse https://code.visualstudio.com/download.  
-   - Baixe e instale a versão correspondente ao seu sistema operacional.  
-   - Após a instalação, abra o VS Code.  
-
-4. **Instalar as extensões necessárias no VS Code**  
-   - Abra o VS Code e vá em **Extensions** (ícone de quadradinho do lado esquerdo).  
-   - Pesquise e instale as seguintes extensões:
-     - **Extension Pack for Java** (fornece suporte básico para desenvolvimento Java).  
-     - **Spring Boot Extension Pack** (para recursos avançados do Spring).  
-     - **Portuguese (Brazil) Language Pack for Visual Studio Code** (caso queira a interface em português).  
-     - **vscode-icons** (para melhorar a visualização dos ícones dos arquivos/projetos).  
-
-5. **Criar o repositório no GitHub**  
-   - Acesse sua conta no GitHub e crie um novo repositório (público ou privado): 
-   ```
-   api-pagamentos
-   ```  
-   - Configure o gerenciamento do projeto criando o projeto, as Milestones e as Issues. 
-
-6. **Criar o projeto utilizando o Spring Initializr**  
-   - Acesse o site do Spring Initializr (https://start.spring.io/) ou utilize a integração do Spring no VS Code.  
-   - Configure as opções:  
-     - **Project**: Maven Project  
-     - **Language**: Java  
-     - **Spring Boot**: Versão LTS ou a mais recente estável  
-     - **Group**: com.seuprojeto (exemplo)  
-     - **Artifact**: api-pagamentos (exemplo)  
-     - **Name**: api-pagamentos (exemplo)  
-     - **Dependencies**:  
-       - Spring Web  
-       - H2 Database  
-       - Spring Data JPA  
-       - Lombok  
-       - Spring Boot DevTools  
-   - Gere o projeto diretamente na pasta.  
-
-7. **Primeiro commit e push do projeto**  
-   - Abra o terminal no VS Code (ou outro terminal) e execute:
-    ```
-    echo "# api-pagamentos" >> README.md
-    git init
-    git add README.md
-    git commit -m "first commit"
-    git branch -M main
-    git remote add origin git@github.com:seu-usuario/api-pagamentos.git
-    git push -u origin main
-    ```
-   - Verifique no GitHub se o projeto foi enviado corretamente para o repositório remoto.  
-
-8. **Criar a branch da Feature: 1. Configuração inicial do projeto**
-   - No repositório, abra a issue e crie a branch
-   - Execute no terminal do VS Code os seguintes comandos para criar a branch no repositório local
-   ```
-   git fetch origin
-   git checkout nome-da-branch
-   ```
-
-9. **Configurar o arquivo `application.properties`**  
-   - Localize o arquivo `src/main/resources/application.properties`.  
-   - Adicione as propriedades básicas de configuração do banco de dados H2 e de JPA, por exemplo:
-     ```
-        server.port=8080
-        spring.application.name=api-pagamentos
-        # Banco de dados H2
-        spring.datasource.url=jdbc:h2:mem:gerenciador_pagamentos
-        spring.datasource.driverClassName=org.h2.Driver
-        spring.datasource.username=sa
-        spring.datasource.password=
-        spring.h2.console.enabled=true
-        spring.h2.console.path=/h2-console
-        # JPA anotações
-        spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
-        spring.jpa.show-sql=true
-        spring.jpa.hibernate.ddl-auto=update
-     ```
-   - Ajuste conforme suas preferências de conexão, se necessário (por exemplo, `spring.jpa.hibernate.ddl-auto=create-drop` para recriar o banco a cada execução durante o desenvolvimento).  
-
-10. **Crie um endpoint de teste**  
-  - Crie o seguinte endpoint de teste
 ```
-@RestController
-@RequestMapping("/api/pagamentos")
-public class TesteController {
-    
-    // Teste de API de pagamentos
-    @RequestMapping("/teste")
-    public String teste() {
-        return "Teste de API de pagamentos";
-    }
-}
+<dependency>
+   <groupId>org.springframework.boot</groupId>
+   <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
 ```
 
-11. **Verificar o funcionamento**  
-   - Na raiz do projeto, execute:
-     ```
-     ./mvnw spring-boot:run
-     ```
-     ou
-     ```
-     mvn spring-boot:run
-     ```
-   - Aguarde a aplicação iniciar. Se tudo estiver correto, ela ficará disponível em `http://localhost:8080/api/pagamentos/teste`.  
-   - Acesse `http://localhost:8080/h2-console` para abrir o console do H2 e confirmar que o banco de dados está funcionando.
+---
 
-12. **Commit e push da Feature**  
-  - Abra o terminal no VS Code (ou outro terminal) e execute:
-  ```
-  git add .
-  git commit -m "Configuração inicial do projeto"
-  git push 
-  ```
+### 2. Estrutura dos pacotes
 
-13. **Crie o Pull Request no GitHub**  
-  - No GitHub, vá até a página do seu repositório.
-  - Se a branch foi enviada corretamente, o GitHub normalmente exibe um botão Compare & pull request ou algo similar. Clique nele.
-  - Se não estiver visível, clique em Pull requests e, em seguida, em New pull request.
-  - Escolha a branch de destino (normalmente a main ou develop) e a sua branch de feature.
-  - Adicione o título e a descrição do seu PR, detalhando as alterações.
-  - Clique em Create pull request.
-  - Revisão, feedback e merge
+- **Modelo (ou entidade)**  
+  - `com.seuprojeto.model` (ou outro pacote definido para entidades)
 
-  - Seus colegas (ou você mesmo) podem revisar o código e fazer comentários.
-  - Quando o PR for aprovado, você (ou alguém com permissões adequadas) pode fazer o merge (união) do PR na branch de destino.
+Essa organização ajuda a manter o código bem separado e facilita a manutenção.
+
+---
+
+### 3. Criação da classe `Categoria`
+
+1. **Nome da classe**: `Categoria`
+2. **Atributos sugeridos**:  
+   - `Long codigo`  
+   - `String nome`
+
+3. **Exemplo de implementação (usando Lombok, JPA e Bean Validation)**:
+   ```java
+      package com.seuprojeto.model;
+      
+      import jakarta.persistence.Entity;
+      import jakarta.persistence.GeneratedValue;
+      import jakarta.persistence.GenerationType;
+      import jakarta.persistence.Id;
+      import jakarta.persistence.Table;
+      import jakarta.validation.constraints.NotNull;
+      import jakarta.validation.constraints.Size;
+      import lombok.AllArgsConstructor;
+      import lombok.Data;
+      import lombok.NoArgsConstructor;
+
+      @Data
+      @NoArgsConstructor
+      @AllArgsConstructor
+      @Entity
+      @Table(name = "categoria")
+      public class Categoria {
+         @Id
+         @GeneratedValue(strategy = GenerationType.IDENTITY)
+         private Long codigo;
+
+         @NotNull
+         @Size(min = 3, max = 20)
+         private String nome;
+      }
+   ```
+   - **Observação:** As anotações `@NotNull` e `@Size` garantem validações de integridade dos dados.
+
+---
+
+### 4. Criação da classe `Endereco`
+
+1. **Nome da classe**: `Endereco`  
+   *Obs.: Evite o uso de acentos em nomes de classes para manter compatibilidade.*
+
+2. **Atributos sugeridos**:  
+   - `String logradouro`  
+   - `String numero`  
+   - `String complemento`  
+   - `String bairro`  
+   - `String cep`  
+   - `String cidade`  
+   - `String estado`
+
+3. **Exemplo de implementação (usando Lombok e JPA)**:
+   ```java
+   package com.seuprojeto.model;
+
+   import jakarta.persistence.Embeddable;
+   import lombok.AllArgsConstructor;
+   import lombok.Data;
+   import lombok.NoArgsConstructor;
+
+   @Data
+   @NoArgsConstructor
+   @AllArgsConstructor
+   @Embeddable
+   public class Endereco {
+      
+      private String logradouro;
+      private String numero;
+      private String complemento;
+      private String bairro;
+      private String cep;
+      private String cidade;
+      private String estado;
+   }
+   ```
+---
+
+### 5. Criação da classe `Pessoa`
+
+1. **Nome da classe**: `Pessoa`
+2. **Atributos sugeridos**:  
+   - `Long codigo`  
+   - `String nome`  
+   - `Boolean ativo` (para indicar se a pessoa está ativa ou não)  
+   - `Endereco endereco`
+
+3. **Exemplo de implementação (usando Lombok, JPA e Bean Validation)**:
+   ```java
+   package com.seuprojeto.model;
+
+   import jakarta.persistence.Embedded;
+   import jakarta.persistence.Entity;
+   import jakarta.persistence.GeneratedValue;
+   import jakarta.persistence.GenerationType;
+   import jakarta.persistence.Id;
+   import jakarta.persistence.Table;
+   import jakarta.validation.constraints.NotNull;
+   import jakarta.validation.constraints.Size;
+
+   @Entity
+   @Table(name = "pessoa")
+   public class Pessoa {
+      @Id
+      @GeneratedValue(strategy = GenerationType.IDENTITY)
+      private Long codigo;
+      
+      @NotNull
+      @Size(min = 3, max = 50)
+      private String nome;
+      
+      @NotNull
+      private Boolean ativo;
+
+      @Embedded
+      private Endereco endereco;
+   }
+   ```
+
+---
+
+### 6. Criação da enumeração `TipoLancamento`
+
+1. **Nome da enumeração**: `TipoLancamento`
+2. **Valores sugeridos**:  
+   - `RECEITA`  
+   - `DESPESA`
+
+3. **Exemplo de implementação**:
+   ```java
+   package com.seuprojeto.model;
+
+   public enum TipoLancamento {
+       RECEITA,
+       DESPESA
+   }
+   ```
+
+---
+
+### 7. Criação da classe `Lancamento`
+
+1. **Nome da classe**: `Lancamento`
+2. **Atributos sugeridos**:  
+   - `Long codigo`  
+   - `String descricao`  
+   - `BigDecimal valor`  
+   - `LocalDate dataVencimento`  
+   - `LocalDate dataPagamento`  
+   - `String observacao`  
+   - `TipoLancamento tipo`  
+   - `Categoria categoria`  
+   - `Pessoa pessoa`
+
+3. **Exemplo de implementação (usando Lombok, JPA e Bean Validation)**:
+   ```java
+   package com.seuprojeto.model;
+
+   import lombok.AllArgsConstructor;
+   import lombok.Data;
+   import lombok.NoArgsConstructor;
+
+   import javax.persistence.*;
+   import javax.validation.constraints.NotNull;
+   import java.math.BigDecimal;
+   import java.time.LocalDate;
+
+   import java.math.BigDecimal;
+   import java.time.LocalDate;
+
+   import jakarta.persistence.Entity;
+   import jakarta.persistence.EnumType;
+   import jakarta.persistence.Enumerated;
+   import jakarta.persistence.GeneratedValue;
+   import jakarta.persistence.GenerationType;
+   import jakarta.persistence.Id;
+   import jakarta.persistence.JoinColumn;
+   import jakarta.persistence.ManyToOne;
+   import jakarta.persistence.Table;
+   import jakarta.validation.constraints.NotNull;
+   import lombok.AllArgsConstructor;
+   import lombok.Data;
+   import lombok.NoArgsConstructor;
+
+   @Data
+   @NoArgsConstructor
+   @AllArgsConstructor
+   @Entity
+   @Table(name = "lancamento")
+   public class Lancamento {
+      @Id
+      @GeneratedValue(strategy = GenerationType.IDENTITY)
+      private Long codigo;
+
+      @NotNull
+      private String descricao;
+
+      @NotNull
+      private BigDecimal valor;
+
+      @NotNull
+      private LocalDate dataVencimento;
+
+      private LocalDate dataPagamento;
+
+      private String observacao;
+
+      @NotNull
+      @Enumerated(EnumType.STRING)
+      private TipoLancamento tipo;
+
+      @ManyToOne
+      @JoinColumn(name = "categoria_codigo")
+      private Categoria categoria;
+
+      @ManyToOne
+      @JoinColumn(name = "pessoa_codigo")
+      private Pessoa pessoa;
+   }
+   ```
+   - **Observação:**  
+     - `@Enumerated(EnumType.STRING)` faz com que o valor da enumeração seja persistido como texto, facilitando a leitura e evitando problemas com a ordem dos enums.
+---
+
+### 8. Carga de dados com script data.sql
+ - Crie o arquivo **data.sql** no diretório **resources**
+ ```sql
+ INSERT INTO categoria (nome) values ('Lazer');
+INSERT INTO categoria (nome) values ('Alimentação');
+INSERT INTO categoria (nome) values ('Supermercado');
+INSERT INTO categoria (nome) values ('Farmácia');
+INSERT INTO categoria (nome) values ('Outros');
+
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('João Silva', 'Rua do Abacaxi', '10', null, 'Brasil', '38.400-12', 'Uberlândia', 'MG', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Maria Rita', 'Rua do Sabiá', '110', 'Apto 101', 'Colina', '11.400-12', 'Ribeirão Preto', 'SP', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Pedro Santos', 'Rua da Bateria', '23', null, 'Morumbi', '54.212-12', 'Goiânia', 'GO', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Ricardo Pereira', 'Rua do Motorista', '123', 'Apto 302', 'Aparecida', '38.400-12', 'Salvador', 'BA', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Josué Mariano', 'Av Rio Branco', '321', null, 'Jardins', '56.400-12', 'Natal', 'RN', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Pedro Barbosa', 'Av Brasil', '100', null, 'Tubalina', '77.400-12', 'Porto Alegre', 'RS', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Henrique Medeiros', 'Rua do Sapo', '1120', 'Apto 201', 'Centro', '12.400-12', 'Rio de Janeiro', 'RJ', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Carlos Santana', 'Rua da Manga', '433', null, 'Centro', '31.400-12', 'Belo Horizonte', 'MG', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Leonardo Oliveira', 'Rua do Músico', '566', null, 'Segismundo Pereira', '38.400-00', 'Uberlândia', 'MG', true);
+INSERT INTO pessoa (nome, logradouro, numero, complemento, bairro, cep, cidade, estado, ativo) values ('Isabela Martins', 'Rua da Terra', '1233', 'Apto 10', 'Vigilato', '99.400-12', 'Manaus', 'AM', true);
+
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Salário mensal', '2017-06-10', null, 6500.00, 'Distribuição de lucros', 'RECEITA', 1, 1);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Bahamas', '2017-02-10', '2017-02-10', 100.32, null, 'DESPESA', 2, 2);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Top Club', '2017-06-10', null, 120, null, 'RECEITA', 3, 3);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('CEMIG', '2017-02-10', '2017-02-10', 110.44, 'Geração', 'RECEITA', 3, 4);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('DMAE', '2017-06-10', null, 200.30, null, 'DESPESA', 3, 5);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Extra', '2017-03-10', '2017-03-10', 1010.32, null, 'RECEITA', 4, 6);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Bahamas', '2017-06-10', null, 500, null, 'RECEITA', 1, 7);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Top Club', '2017-03-10', '2017-03-10', 400.32, null, 'DESPESA', 4, 8);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Despachante', '2017-06-10', null, 123.64, 'Multas', 'DESPESA', 3, 9);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Pneus', '2017-04-10', '2017-04-10', 665.33, null, 'RECEITA', 5, 10);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Café', '2017-06-10', null, 8.32, null, 'DESPESA', 1, 5);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Eletrônicos', '2017-04-10', '2017-04-10', 2100.32, null, 'DESPESA', 5, 4);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Instrumentos', '2017-06-10', null, 1040.32, null, 'DESPESA', 4, 3);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Café', '2017-04-10', '2017-04-10', 4.32, null, 'DESPESA', 4, 2);
+INSERT INTO lancamento (descricao, data_vencimento, data_pagamento, valor, observacao, tipo, categoria_codigo, pessoa_codigo) values ('Lanche', '2017-06-10', null, 10.20, null, 'DESPESA', 4, 1);
+ ```
+
+ ---
+
+### 9. Alterando o arquivo application.properties
+ - Adicione as seguintes linhas ao seu application.properties:
+ ```
+ #quando usar o data.sql para popular o banco
+ spring.jpa.defer-datasource-initialization=true
+ spring.sql.init.encoding=UTF-8
+```
+**Explicação:**
+
+spring.jpa.defer-datasource-initialization=true
+
+- Esta propriedade adia a inicialização do datasource até que o contexto do JPA esteja completamente configurado. Assim, evita-se que o script SQL seja executado antes das entidades estarem totalmente mapeadas, prevenindo possíveis conflitos na criação do schema.
+
+spring.sql.init.encoding=UTF-8
+
+- Define a codificação usada para ler os arquivos SQL de inicialização (como o data.sql). Com essa configuração, os caracteres especiais e acentuação são interpretados corretamente, garantindo a integridade dos dados carregados no banco.
+
+---
+
+### 10. Execute a aplicação e verifique se os dados foram carregados no banco de dados H2
+
+- Após iniciar a aplicação, acesse o console do H2 ( disponível em [http://localhost:8080/h2-console](http://localhost:8080/h2-console)) para confirmar que os dados do arquivo **data.sql** foram inseridos corretamente. 
+- Utilize as credenciais configuradas em seu projeto para realizar o login e navegue pelas tabelas para verificar os registros.
+
+---
+
+### 11. Realize o commit, push e abra um Pull Request para essa issue
+
+- Após validar que os dados foram carregados corretamente, efetue o commit das alterações e faça o push para o repositório remoto. 
+```
+git add .
+git commit -m "2. Criação das entidades e mapeamento"
+git push 
+```
+
+- Em seguida, abra um Pull Request (PR) na branch de destino, descrevendo as alterações realizadas. Certifique-se de que o PR esteja de acordo com as diretrizes do projeto para revisão e integração.
+
+### 12. Sincronize a branch main do diretório local
+- No diretório local, retorn para a branch main e atualize com o diretório remoto.
+```
+git checkout main
+git pull
+```
