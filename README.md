@@ -67,7 +67,7 @@ A seguir, um passo a passo detalhado para implementar os endpoints de Categorias
     }
 ```
 
-> *Observação:* Se for passado um código inexistente, haverá um erro `Internal Server Error`. Na próxima issue será criado a exceção `RecursoNaoEncontradoException` e, configurado um handler global para transformar essa exceção em um status HTTP 404.
+> *Observação:* Se for passado um código inexistente, haverá um erro 500 `Internal Server Error`. Na próxima issue será criado a exceção `RecursoNaoEncontradoException` e, configurado um handler global para transformar essa exceção em um status HTTP 404.
 
 ---
 
