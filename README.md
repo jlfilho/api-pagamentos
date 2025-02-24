@@ -4,7 +4,7 @@ Segue um passo a passo detalhado para implementar o **CategoriaRepository** e o 
 
 ---
 
-## Implementando o CategoriaRepository
+## 1. Implementando o CategoriaRepository
 
 1. **Criar o pacote de repositórios**  
    - Se ainda não existir, crie um pacote, por exemplo: `com.seuprojeto.repository`.
@@ -33,7 +33,7 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
 
 ---
 
-## Implementando o CategoriaService
+## 2. Implementando o CategoriaService
 
 1. **Criar o pacote de serviços**  
    - Se ainda não existir, crie um pacote, por exemplo: `com.seuprojeto.service`.
@@ -105,7 +105,7 @@ public class CategoriaService {
 
 ---
 
-### 4. Realize o commit, push e abra um Pull Request para essa issue
+## 3. Realize o commit, push e abra um Pull Request para essa issue
 
  - Após validar que os dados foram carregados corretamente, efetue o commit das alterações e faça o push para o repositório remoto.
 
@@ -119,7 +119,7 @@ public class CategoriaService {
 
 ---
 
-### 5. Sincronize a branch main do diretório local
+### 4. Sincronize a branch main do diretório local
 
  - No diretório local, retorne para a branch main e atualize com o diretório remoto.
 
