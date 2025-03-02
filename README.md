@@ -192,7 +192,7 @@ public class PessoaService {
 
 - Em seguida, abra um Pull Request (PR) na branch de destino, descrevendo as alterações realizadas. Certifique-se de que o PR esteja de acordo com as diretrizes do projeto para revisão e integração.
 
-## 8. Sincronize a branch main do diretório local
+## 6. Sincronize a branch main do diretório local
 
 - No diretório local, retorne para a branch main e atualize com o diretório remoto.
 ```
