@@ -186,8 +186,6 @@ public ResponseEntity<Categoria> buscarPorCodigo(@PathVariable Long codigo) {
 
 ---
 
-Seguindo esses passos, você terá uma implementação robusta para tratar exceções customizadas na sua aplicação, facilitando a manutenção e garantindo respostas de erro claras e consistentes.
-
 ## 8. Realize o commit, push e abra um Pull Request para essa issue
  -  Após validar que os dados foram carregados corretamente, efetue o commit das alterações e faça o push para o repositório remoto.
    ```
