@@ -1,181 +1,215 @@
-# 4. Implementar endpoints de Categorias
+# Tutorial: Implementação de Exceções Customizadas e Exception Handler
 
-A seguir, um passo a passo detalhado para implementar os endpoints de Categorias (GET, POST, PUT e DELETE), incluindo as validações e definição de status HTTP:
+## 1. Criação da Branch no Git
 
----
+1. **No GitHub remoto:** Crie a branch para implementar a nova issue.
+2. **No ambiente local:** Execute os seguintes comandos para buscar a branch e mudar para ela:
 
-### 1. Criar o Controller
-
-1. **Crie a classe CategoriaController**  
-   - No pacote, por exemplo, `com.seuprojeto.controller`, crie uma classe chamada `CategoriaController`.
-
-2. **Anote a classe**  
-   - Utilize `@RestController` para indicar que os métodos retornam dados JSON.
-   - Utilize `@RequestMapping("/categorias")` para definir a rota base dos endpoints.
-
----
-
-### 2. Injetar o Serviço
-
-1. **Injete o CategoriaService**  
-   - Utilize a injeção de dependência (preferencialmente via construtor) para acessar a camada de negócio.
-
-   ```java
-    private final CategoriaService categoriaService;
-    
-    public CategoriaController(CategoriaService categoriaService) {
-        this.categoriaService = categoriaService;
-    }
-    ```
-
----
-
-### 3. Implementar GET /categorias
-
-1. **Defina o método**  
-   - Utilize `@GetMapping` sem parâmetros para retornar a lista de todas as categorias.
-
-2. **Validação e status HTTP**  
-   - Retorne a lista com status HTTP 200 (OK).
-   - Caso a lista esteja vazia, você pode optar por retornar uma lista vazia ou o status 204 (No Content), conforme a necessidade do negócio.
-
-**Exemplo:**
-```java
-    @GetMapping
-    public ResponseEntity<List<Categoria>> listarTodas() {
-        List<Categoria> categorias = categoriaService.listarTodas();
-        if (categorias.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(categorias);
-    }
+```bash
+git fetch origin
+git checkout 15-41-implementar-tratamento-de-exceção-customizada
 ```
 
 ---
 
-### 4. Implementar GET /categorias/{codigo}
+## 2. Criação das Classes de Exceção Customizada
 
-1. **Defina o método**  
-   - Utilize `@GetMapping("/{codigo}")` e anote o parâmetro com `@PathVariable`.
+### a) Crie o subpacote `exception`
 
-**Exemplo:**
+No pacote de _services_, crie um subpacote chamado `exception`.
+
+### b) Classe `RecursoNaoEncontradoException`
+
+Esta exceção estende `RuntimeException`, permitindo lançá-la sem obrigar o uso de try/catch explícito.
+
+```java
+public class RecursoNaoEncontradoException extends RuntimeException {
+
+    public RecursoNaoEncontradoException(String message) {
+        super(message);
+    }
+
+    public RecursoNaoEncontradoException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+```
+
+> **Dica:** Utilizar `RuntimeException` evita a obrigatoriedade de tratamento explícito em cada método.
+
+### c) Classe `RecursoEmUsoException`
+
+Crie também a exceção para indicar que o recurso está em uso e não pode ser removido:
+
+```java
+public class RecursoEmUsoException extends RuntimeException {
+
+    public RecursoEmUsoException(String message) {
+        super(message);
+    }
+
+    public RecursoEmUsoException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+```
+
+---
+
+## 3. Lançamento das Exceções no Service
+
+### a) Método para buscar recurso por código
+
+Utilize o método `orElseThrow` para lançar a exceção caso o recurso não seja encontrado:
+
+```java
+public Categoria buscarPorCodigo(Long codigo) {
+    return categoriaRepository.findById(codigo)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Recurso com ID " + codigo + " não encontrado."));
+}
+```
+
+> **Observação:** Essa abordagem torna o código mais limpo ao evitar condicionais explícitas.
+
+### b) Refatoração do método atualizar
+
+```java
+public Categoria atualizar(Long codigo, Categoria categoria) {
+    Categoria categoriaExistente = categoriaRepository.findById(codigo)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada!"));
+
+    categoriaExistente.setNome(categoria.getNome());
+    return categoriaRepository.save(categoriaExistente);
+}
+```
+
+### c) Refatoração do método deletar
+
+```java
+public void deletar(Long codigo) {
+    Categoria categoriaExistente = categoriaRepository.findById(codigo)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada!"));
+
+    try {
+        categoriaRepository.delete(categoriaExistente);
+    } catch (DataIntegrityViolationException ex) {
+        throw new RecursoEmUsoException("Categoria em uso e não pode ser removida.", ex);
+    }
+}
+```
+
+> **Observação:** Caso a operação de delete viole a integridade referencial, a exceção `DataIntegrityViolationException` é capturada e relançada como `RecursoEmUsoException`.
+
+---
+
+## 4. Criação do DTO para Resposta de Erro
+
+Crie uma classe que represente a estrutura da resposta de erro enviada ao cliente, contendo status HTTP, mensagem e timestamp.
+
+```java
+@Data
+public class ErrorResponse {
+    private int status;
+    private String message;
+    private long timestamp;
+
+    public ErrorResponse(int status, String message, long timestamp) {
+        this.status = status;
+        this.message = message;
+        this.timestamp = timestamp;
+    }
+}
+```
+
+---
+
+## 5. Implementação do Exception Handler
+
+Crie uma classe anotada com `@RestControllerAdvice` (ou `@ControllerAdvice` para aplicações não REST) para interceptar as exceções e retornar respostas apropriadas.
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> handleRecursoNaoEncontradoException(RecursoNaoEncontradoException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+            HttpStatus.NOT_FOUND.value(),
+            ex.getMessage(),
+            System.currentTimeMillis()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(RecursoEmUsoException.class)
+    public ResponseEntity<ErrorResponse> handleCategoriaEmUsoException(RecursoEmUsoException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+            HttpStatus.CONFLICT.value(),
+            ex.getMessage(),
+            System.currentTimeMillis()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+}
+```
+
+> **Dica:** Use o status 404 para recursos não encontrados e 409 para conflitos de integridade (categoria em uso).
+
+---
+
+## 6. Ajuste no Controller
+
+No controller, ajuste o método de busca para utilizar o service sem o uso de `.get()`, deixando o tratamento de exceção para o handler:
+
 ```java
 @GetMapping("/{codigo}")
-    public ResponseEntity<Categoria> buscarPorCodigo(@PathVariable Long codigo) {
-        Categoria categoria = categoriaService.buscarPorCodigo(codigo).get();
-        return ResponseEntity.ok(categoria);
-    }
-```
-
-> *Observação:* Se for passado um código inexistente, haverá um erro 500 `Internal Server Error`. Na próxima issue será criado a exceção `RecursoNaoEncontradoException` e, configurado um handler global para transformar essa exceção em um status HTTP 404.
-
----
-
-### 5. Implementar POST /categorias
-
-1. **Defina o método**  
-   - Utilize `@PostMapping` para criar uma nova categoria.
-   - Receba os dados com `@RequestBody` e utilize `@Valid` para disparar validações definidas na entidade.
-
-2. **Validação e status HTTP**  
-   - Após salvar a categoria, retorne o status HTTP 201 (Created).
-   - Utilize o `ResponseEntity` para incluir o header `Location` (opcional) apontando para o novo recurso.
-
-**Exemplo:**
-```java
-@PostMapping
-public ResponseEntity<Categoria> criarCategoria(@Valid @RequestBody Categoria categoria) {
-    Categoria novaCategoria = categoriaService.salvar(categoria);
-    URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-             .path("/{codigo}")
-             .buildAndExpand(novaCategoria.getCodigo())
-             .toUri();
-    return ResponseEntity.created(uri).body(novaCategoria);
-}
-```
-
----
-### 6. Implementar PUT /categorias/{codigo}
-
-1. **Criar o método de atualização:**  
-   - Utilize a anotação `@PutMapping("/{codigo}")` para mapear a rota.
-   - Receba o identificador (`@PathVariable Long codigo`) e o objeto da categoria atualizado (`@RequestBody @Valid Categoria categoria`).
-2. **Chamar o serviço de atualização:**  
-   - No método, invoque o serviço responsável pela atualização. Esse método no service deverá buscar a categoria existente, atualizar os campos necessários e salvar as alterações.
-3. **Retornar o ResponseEntity:**  
-   - Após a atualização, retorne um `ResponseEntity` com a categoria atualizada e status HTTP 200 (OK).
-
-**Exemplo:**
-
-```java
-@PutMapping("/{codigo}")
-public ResponseEntity<Categoria> atualizarCategoria(@PathVariable Long codigo,
-    @Valid @RequestBody Categoria categoria) {
-    Categoria categoriaAtualizada = categoriaService.atualizar(codigo, categoria);
-    return ResponseEntity.ok(categoriaAtualizada);
-}
-```
----
-
-### 7. Implementar DELETE /categorias/{codigo}
-
-1. **Criar o método de exclusão:**  
-   - Utilize a anotação `@DeleteMapping("/{codigo}")` para mapear a rota.
-   - Receba o identificador da categoria via `@PathVariable`.
-2. **Chamar o serviço de exclusão:**  
-   - O método do service deve verificar se a categoria existe e, em seguida, realizar a exclusão.
-3. **Retornar o ResponseEntity:**  
-   - Após a exclusão, retorne um `ResponseEntity` com status 204 (No Content).
-
-**Exemplo:**
-
-```java
-@DeleteMapping("/{codigo}")
-public ResponseEntity<Void> deletarCategoria(@PathVariable Long codigo) {
-    categoriaService.deletar(codigo);
-    return ResponseEntity.noContent().build();
+public ResponseEntity<Categoria> buscarPorCodigo(@PathVariable Long codigo) {
+    Categoria categoria = categoriaService.buscarPorCodigo(codigo);
+    return ResponseEntity.ok(categoria);
 }
 ```
 
 ---
 
-### 8. Testar os Endpoints
+## 7. Teste a Implementação
 
-1. **Utilize ferramentas de testes**  
-   - Teste os endpoints utilizando o Insomnia, Postman, cURL ou a própria interface do Swagger (se implementada).
+1. **Executando a Aplicação:**  
+   Inicie a aplicação e faça requisições utilizando ferramentas como Postman, Insomnia ou o navegador.  
+   Exemplos de requisições:  
+   - `GET /categorias/{codigo}` para buscar uma categoria.  
+   - `PUT /categorias/{codigo}` para atualizar uma categoria.
+   - `DELETE /categorias/{codigo}` para remover uma categoria.
 
-2. **Valide os retornos e status HTTP**  
-   - **GET /categorias:** Verifique se retorna status 200 e a lista de categorias.
-   - **GET /categorias/{codigo}:**  
-     - Se o recurso existir, retorne status 200 com os dados.
-     - Se não existir, retorna erro 500 e a mensagem de erro.
-   - **POST /categorias:**  
-     - Com dados válidos, retorne status 201, o recurso criado e o header `Location`.
-     - Com dados inválidos (violando as anotações de validação), retorne status 400 (Bad Request) com os erros.
-   - **PUT /categorias/{codigo}:**  
-     - Com dados válidos, retorne status 200, e a categoria alterada.
-     - Com dados inválidos (violando as anotações de validação), retorne status 400 (Bad Request) com os erros.
-     - Se não existir, retorna erro 500 e a mensagem de erro.
-   - **DELETE /categorias/{codigo}:**  
-     - Se o recurso existir, retorne status 204, no content.
-     - Se tentar excluir uma categoria com lançamento, retorna erro 500 e a mensagem de erro. 
-     - Se não existir, retorne erro 500 e a mensagem de erro.
+2. **Verificação da Resposta:**  
+   - Se o recurso não existir, o Exception Handler deverá retornar uma resposta com status HTTP **404 Not Found** e o corpo definido no DTO `ErrorResponse`.  
+   - Se tentar remover uma categoria em uso, o Exception Handler deverá retornar uma resposta com status HTTP **409 Conflict**.
+
 ---
 
-### Realize o commit, push e abra um Pull Request para essa issue
+Seguindo esses passos, você terá uma implementação robusta para tratar exceções customizadas na sua aplicação, facilitando a manutenção e garantindo respostas de erro claras e consistentes.
+
+## 8. Realize o commit, push e abra um Pull Request para essa issue
  -  Após validar que os dados foram carregados corretamente, efetue o commit das alterações e faça o push para o repositório remoto.
    ```
    git add .
-   git commit -m "4. Implementar endpoints de Categorias"
+   git commit -m "15-41-implementar-tratamento-de-exceção-customizada"
    git push 
    ```
 
 - Em seguida, abra um Pull Request (PR) na branch de destino, descrevendo as alterações realizadas. Certifique-se de que o PR esteja de acordo com as diretrizes do projeto para revisão e integração.
 
-### 5. Sincronize a branch main do diretório local
+## 9. Sincronize a branch main do diretório local
 
 - No diretório local, retorne para a branch main e atualize com o diretório remoto.
 ```
 git checkout main
 git pull
 ```
+
+---
+
+## 10. Considerações Finais
+
+- **Localização do Exception Handler:** Certifique-se de que a classe anotada com `@RestControllerAdvice` esteja em um pacote que seja escaneado pelo Spring Boot.
+- **Personalização:** É possível criar handlers adicionais para outras exceções e personalizar as respostas (ex.: adicionando códigos de erro ou links para documentação).
+- **Consistência:** O uso de exceções customizadas e de um handler centralizado melhora a manutenção e a clareza na comunicação de erros com os clientes.

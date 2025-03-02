@@ -39,7 +39,7 @@ public class CategoriaController {
 
     @GetMapping("/{codigo}")
     public ResponseEntity<Categoria> buscarPorCodigo(@PathVariable Long codigo) {
-        Categoria categoria = categoriaService.buscarPorCodigo(codigo).get();
+        Categoria categoria = categoriaService.buscarPorCodigo(codigo);
         return ResponseEntity.ok(categoria);
     }
 
@@ -54,8 +54,7 @@ public class CategoriaController {
     }
 
     @PutMapping("/{codigo}")
-    public ResponseEntity<Categoria> atualizarCategoria(@PathVariable Long codigo,
-            @Valid @RequestBody Categoria categoria) {
+    public ResponseEntity<Categoria> atualizarCategoria(@PathVariable Long codigo, @Valid @RequestBody Categoria categoria) {
         Categoria categoriaAtualizada = categoriaService.atualizar(codigo, categoria);
         return ResponseEntity.ok(categoriaAtualizada);
     }
