@@ -1,215 +1,201 @@
-# Tutorial: Implementação de Exceções Customizadas e Exception Handler
+# Tutorial: Criação do repositório e serviço para Pessoas
+
+A seguir, um passo a passo detalhado para implementar o repositório e o serviço da entidade Pessoa, utilizando uma abordagem baseada em DTO (Data Transfer Object) para desacoplar a camada de persistência da camada de apresentação. O tutorial inclui desde a criação da branch para a nova feature até a abertura do pull request para a branch main.
+
+---
 
 ## 1. Criação da Branch no Git
 
-1. **No GitHub remoto:** Crie a branch para implementar a nova issue.
-2. **No ambiente local:** Execute os seguintes comandos para buscar a branch e mudar para ela:
-
+No GitHub remoto: Crie a branch para implementar a nova issue.
+No ambiente local: Execute os seguintes comandos para buscar a branch e mudar para ela:
 ```bash
 git fetch origin
-git checkout 15-41-implementar-tratamento-de-exceção-customizada
+git checkout 5-5-criação-do-repositório-e-serviço-para-pessoas
 ```
+
+*Esses comandos criam uma branch chamada `5-5-criação-do-repositório-e-serviço-para-pessoas` no repositório remoto e as sincroniza com o local.*
 
 ---
 
-## 2. Criação das Classes de Exceção Customizada
+## 2. Implementando o Repositório (PessoaRepository)
 
-### a) Crie o subpacote `exception`
-
-No pacote de _services_, crie um subpacote chamado `exception`.
-
-### b) Classe `RecursoNaoEncontradoException`
-
-Esta exceção estende `RuntimeException`, permitindo lançá-la sem obrigar o uso de try/catch explícito.
+Crie uma interface que estenda o `JpaRepository` para a entidade `Pessoa`. Isso facilitará as operações CRUD sem a necessidade de implementação manual.
 
 ```java
-public class RecursoNaoEncontradoException extends RuntimeException {
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-    public RecursoNaoEncontradoException(String message) {
-        super(message);
-    }
-
-    public RecursoNaoEncontradoException(String message, Throwable cause) {
-        super(message, cause);
-    }
+@Repository
+public interface PessoaRepository extends JpaRepository<Pessoa, Long> {
+    // Se necessário, adicione métodos de consulta customizados aqui.
 }
 ```
 
-> **Dica:** Utilizar `RuntimeException` evita a obrigatoriedade de tratamento explícito em cada método.
-
-### c) Classe `RecursoEmUsoException`
-
-Crie também a exceção para indicar que o recurso está em uso e não pode ser removido:
-
-```java
-public class RecursoEmUsoException extends RuntimeException {
-
-    public RecursoEmUsoException(String message) {
-        super(message);
-    }
-
-    public RecursoEmUsoException(String message, Throwable cause) {
-        super(message, cause);
-    }
-}
-```
+*O repositório permite interagir com a tabela `pessoa` do banco de dados.*
 
 ---
 
-## 3. Lançamento das Exceções no Service
+## 3. Criação dos DTOs
 
-### a) Método para buscar recurso por código
+Utilizar DTOs ajuda a expor somente os dados necessários, evitando o acoplamento direto com a entidade. Crie, por exemplo, o `PessoaDTO` e, se necessário, o `EnderecoDTO`.
 
-Utilize o método `orElseThrow` para lançar a exceção caso o recurso não seja encontrado:
-
-```java
-public Categoria buscarPorCodigo(Long codigo) {
-    return categoriaRepository.findById(codigo)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Recurso com ID " + codigo + " não encontrado."));
-}
-```
-
-> **Observação:** Essa abordagem torna o código mais limpo ao evitar condicionais explícitas.
-
-### b) Refatoração do método atualizar
-
-```java
-public Categoria atualizar(Long codigo, Categoria categoria) {
-    Categoria categoriaExistente = categoriaRepository.findById(codigo)
-        .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada!"));
-
-    categoriaExistente.setNome(categoria.getNome());
-    return categoriaRepository.save(categoriaExistente);
-}
-```
-
-### c) Refatoração do método deletar
-
-```java
-public void deletar(Long codigo) {
-    Categoria categoriaExistente = categoriaRepository.findById(codigo)
-            .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada!"));
-
-    try {
-        categoriaRepository.delete(categoriaExistente);
-    } catch (DataIntegrityViolationException ex) {
-        throw new RecursoEmUsoException("Categoria em uso e não pode ser removida.", ex);
-    }
-}
-```
-
-> **Observação:** Caso a operação de delete viole a integridade referencial, a exceção `DataIntegrityViolationException` é capturada e relançada como `RecursoEmUsoException`.
-
----
-
-## 4. Criação do DTO para Resposta de Erro
-
-Crie uma classe que represente a estrutura da resposta de erro enviada ao cliente, contendo status HTTP, mensagem e timestamp.
+### PessoaDTO
 
 ```java
 @Data
-public class ErrorResponse {
-    private int status;
-    private String message;
-    private long timestamp;
-
-    public ErrorResponse(int status, String message, long timestamp) {
-        this.status = status;
-        this.message = message;
-        this.timestamp = timestamp;
-    }
+@NoArgsConstructor
+@AllArgsConstructor
+public class PessoaDTO {
+    private Long codigo;
+    private String nome;
+    private Boolean ativo;
+    private EnderecoDTO endereco;
 }
 ```
 
----
+### EnderecoDTO
 
-## 5. Implementação do Exception Handler
-
-Crie uma classe anotada com `@RestControllerAdvice` (ou `@ControllerAdvice` para aplicações não REST) para interceptar as exceções e retornar respostas apropriadas.
+*Caso a classe `Endereco` possua atributos como logradouro, cidade, etc., crie um DTO correspondente:*
 
 ```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(RecursoNaoEncontradoException.class)
-    public ResponseEntity<ErrorResponse> handleRecursoNaoEncontradoException(RecursoNaoEncontradoException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(
-            HttpStatus.NOT_FOUND.value(),
-            ex.getMessage(),
-            System.currentTimeMillis()
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(RecursoEmUsoException.class)
-    public ResponseEntity<ErrorResponse> handleCategoriaEmUsoException(RecursoEmUsoException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(
-            HttpStatus.CONFLICT.value(),
-            ex.getMessage(),
-            System.currentTimeMillis()
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
-    }
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class EnderecoDTO {
+    private String logradouro;
+    private String cidade;
+    private String estado;
+    private String cep;
 }
 ```
 
-> **Dica:** Use o status 404 para recursos não encontrados e 409 para conflitos de integridade (categoria em uso).
-
 ---
 
-## 6. Ajuste no Controller
+## 4. Implementando o Serviço (PessoaService)
 
-No controller, ajuste o método de busca para utilizar o service sem o uso de `.get()`, deixando o tratamento de exceção para o handler:
+Crie uma classe de serviço anotada com `@Service` para encapsular a lógica de negócio da entidade Pessoa. Essa camada usará o repositório e fará a conversão entre a entidade e o DTO.
 
 ```java
-@GetMapping("/{codigo}")
-public ResponseEntity<Categoria> buscarPorCodigo(@PathVariable Long codigo) {
-    Categoria categoria = categoriaService.buscarPorCodigo(codigo);
-    return ResponseEntity.ok(categoria);
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class PessoaService {
+
+    private final PessoaRepository pessoaRepository;
+
+    public PessoaService(PessoaRepository pessoaRepository) {
+        this.pessoaRepository = pessoaRepository;
+    }
+
+    // Método para converter Pessoa em PessoaDTO
+    private PessoaDTO toDTO(Pessoa pessoa) {
+        PessoaDTO dto = new PessoaDTO();
+        dto.setCodigo(pessoa.getCodigo());
+        dto.setNome(pessoa.getNome());
+        dto.setAtivo(pessoa.getAtivo());
+        if (pessoa.getEndereco() != null) {
+            EnderecoDTO enderecoDTO = new EnderecoDTO();
+            enderecoDTO.setLogradouro(pessoa.getEndereco().getLogradouro());
+            enderecoDTO.setCidade(pessoa.getEndereco().getCidade());
+            enderecoDTO.setEstado(pessoa.getEndereco().getEstado());
+            enderecoDTO.setCep(pessoa.getEndereco().getCep());
+            dto.setEndereco(enderecoDTO);
+        }
+        return dto;
+    }
+
+    // Método para converter PessoaDTO em Pessoa
+    private Pessoa toEntity(PessoaDTO dto) {
+        Pessoa pessoa = new Pessoa();
+        pessoa.setCodigo(dto.getCodigo());
+        pessoa.setNome(dto.getNome());
+        pessoa.setAtivo(dto.getAtivo());
+        if (dto.getEndereco() != null) {
+            Endereco endereco = new Endereco();
+            endereco.setLogradouro(dto.getEndereco().getLogradouro());
+            endereco.setCidade(dto.getEndereco().getCidade());
+            endereco.setEstado(dto.getEndereco().getEstado());
+            endereco.setCep(dto.getEndereco().getCep());
+            pessoa.setEndereco(endereco);
+        }
+        return pessoa;
+    }
+
+    @Transactional
+    public PessoaDTO criarPessoa(PessoaDTO pessoaDTO) {
+        Pessoa pessoa = toEntity(pessoaDTO);
+        Pessoa savedPessoa = pessoaRepository.save(pessoa);
+        return toDTO(savedPessoa);
+    }
+
+    public PessoaDTO buscarPessoaPorCodigo(Long codigo) {
+        Pessoa pessoa = pessoaRepository.findById(codigo)
+                .orElseThrow(() -> new RuntimeException("Pessoa não encontrada"));
+        return toDTO(pessoa);
+    }
+
+    public List<PessoaDTO> listarPessoas() {
+        return pessoaRepository.findAll().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public PessoaDTO atualizarPessoa(Long codigo, PessoaDTO pessoaDTO) {
+        Pessoa pessoaExistente = pessoaRepository.findById(codigo)
+                .orElseThrow(() -> new RuntimeException("Pessoa não encontrada"));
+
+        pessoaExistente.setNome(pessoaDTO.getNome());
+        pessoaExistente.setAtivo(pessoaDTO.getAtivo());
+        if (pessoaDTO.getEndereco() != null) {
+            Endereco endereco = new Endereco();
+            endereco.setLogradouro(pessoaDTO.getEndereco().getLogradouro());
+            endereco.setCidade(pessoaDTO.getEndereco().getCidade());
+            endereco.setEstado(pessoaDTO.getEndereco().getEstado());
+            endereco.setCep(pessoaDTO.getEndereco().getCep());
+            pessoaExistente.setEndereco(endereco);
+        }
+
+        Pessoa updatedPessoa = pessoaRepository.save(pessoaExistente);
+        return toDTO(updatedPessoa);
+    }
+
+    @Transactional
+    public void deletarPessoa(Long codigo) {
+        if (!pessoaRepository.existsById(codigo)) {
+            throw new RecursoNaoEncontradoException("Pessoa não encontrada");
+        }
+        try {
+            pessoaRepository.deleteById(codigo);
+        } catch (DataIntegrityViolationException e) {
+            throw new RecursoEmUsoException("Pessoa em uso e não pode ser removida");
+        }
+
+    }
 }
 ```
 
----
-
-## 7. Teste a Implementação
-
-1. **Executando a Aplicação:**  
-   Inicie a aplicação e faça requisições utilizando ferramentas como Postman, Insomnia ou o navegador.  
-   Exemplos de requisições:  
-   - `GET /categorias/{codigo}` para buscar uma categoria.  
-   - `PUT /categorias/{codigo}` para atualizar uma categoria.
-   - `DELETE /categorias/{codigo}` para remover uma categoria.
-
-2. **Verificação da Resposta:**  
-   - Se o recurso não existir, o Exception Handler deverá retornar uma resposta com status HTTP **404 Not Found** e o corpo definido no DTO `ErrorResponse`.  
-   - Se tentar remover uma categoria em uso, o Exception Handler deverá retornar uma resposta com status HTTP **409 Conflict**.
+*Nesse serviço, métodos básicos de CRUD foram implementados, com conversão entre Pessoa e PessoaDTO para manter o acoplamento baixo entre as camadas.*
 
 ---
 
-Seguindo esses passos, você terá uma implementação robusta para tratar exceções customizadas na sua aplicação, facilitando a manutenção e garantindo respostas de erro claras e consistentes.
-
-## 8. Realize o commit, push e abra um Pull Request para essa issue
+## 5. Realize o commit, push e abra um Pull Request para essa issue
  -  Após validar que os dados foram carregados corretamente, efetue o commit das alterações e faça o push para o repositório remoto.
    ```
    git add .
-   git commit -m "15-41-implementar-tratamento-de-exceção-customizada"
+   git commit -m "5-5-criação-do-repositório-e-serviço-para-pessoas"
    git push 
    ```
 
 - Em seguida, abra um Pull Request (PR) na branch de destino, descrevendo as alterações realizadas. Certifique-se de que o PR esteja de acordo com as diretrizes do projeto para revisão e integração.
 
-## 9. Sincronize a branch main do diretório local
+## 8. Sincronize a branch main do diretório local
 
 - No diretório local, retorne para a branch main e atualize com o diretório remoto.
 ```
 git checkout main
 git pull
 ```
-
----
-
-## 10. Considerações Finais
-
-- **Localização do Exception Handler:** Certifique-se de que a classe anotada com `@RestControllerAdvice` esteja em um pacote que seja escaneado pelo Spring Boot.
-- **Personalização:** É possível criar handlers adicionais para outras exceções e personalizar as respostas (ex.: adicionando códigos de erro ou links para documentação).
-- **Consistência:** O uso de exceções customizadas e de um handler centralizado melhora a manutenção e a clareza na comunicação de erros com os clientes.
