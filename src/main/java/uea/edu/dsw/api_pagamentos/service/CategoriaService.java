@@ -1,13 +1,13 @@
 package uea.edu.dsw.api_pagamentos.service;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import uea.edu.dsw.api_pagamentos.model.Categoria;
 import uea.edu.dsw.api_pagamentos.repository.CategoriaRepository;
+import uea.edu.dsw.api_pagamentos.service.exception.RecursoEmUsoException;
 import uea.edu.dsw.api_pagamentos.service.exception.RecursoNaoEncontradoException;
 
 @Service
@@ -47,8 +47,8 @@ public class CategoriaService {
 
         try {
             categoriaRepository.delete(categoriaExistente);
-        } catch (DataIntegrityViolationException ex) {
-            throw new RecursoEmUsoException("Categoria em uso e não pode ser removida.", ex);
+        } catch ( DataIntegrityViolationException ex) {
+            throw new RecursoEmUsoException("Categoria em uso e não pode ser removida.");
         }
     }
 }

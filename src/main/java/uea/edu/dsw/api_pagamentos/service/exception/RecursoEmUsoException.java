@@ -1,4 +1,4 @@
-package uea.edu.dsw.api_pagamentos.service;
+package uea.edu.dsw.api_pagamentos.service.exception;
 
 public class RecursoEmUsoException extends RuntimeException {
 

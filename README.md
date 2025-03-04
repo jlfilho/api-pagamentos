@@ -1,201 +1,289 @@
-# Tutorial: Criação do repositório e serviço para Pessoas
+# Tutorial: Implementar Endpoints de Pessoas
 
-A seguir, um passo a passo detalhado para implementar o repositório e o serviço da entidade Pessoa, utilizando uma abordagem baseada em DTO (Data Transfer Object) para desacoplar a camada de persistência da camada de apresentação. O tutorial inclui desde a criação da branch para a nova feature até a abertura do pull request para a branch main.
+Este tutorial orienta a implementação dos endpoints para gerenciamento de pessoas, incluindo o tratamento de exceções para recurso não encontrado, recurso em uso e tentativa de alteração de uma propriedade já definida.
 
 ---
 
 ## 1. Criação da Branch no Git
 
-No GitHub remoto: Crie a branch para implementar a nova issue.
-No ambiente local: Execute os seguintes comandos para buscar a branch e mudar para ela:
+No repositório remoto (GitHub), crie uma branch para implementar a nova issue. Em seguida, no ambiente local, execute:
+
 ```bash
 git fetch origin
-git checkout 5-5-criação-do-repositório-e-serviço-para-pessoas
+git checkout 6-6-implementar-endpoints-de-pessoas
 ```
 
-*Esses comandos criam uma branch chamada `5-5-criação-do-repositório-e-serviço-para-pessoas` no repositório remoto e as sincroniza com o local.*
+*Esses comandos trazem a branch `6-6-implementar-endpoints-de-pessoas` do repositório remoto para o ambiente local.*
 
 ---
 
-## 2. Implementando o Repositório (PessoaRepository)
+## 2. Atualize o PessoaService
 
-Crie uma interface que estenda o `JpaRepository` para a entidade `Pessoa`. Isso facilitará as operações CRUD sem a necessidade de implementação manual.
+Abra o arquivo `PessoaService` e adicione (ou atualize) os métodos para gerenciar a pessoa. Em especial:
+
+### a) Método para atualizar o status
+
+Adicione um método que atualize o status de uma pessoa. Caso o status enviado seja igual ao já definido, lance uma exceção. Por exemplo:
 
 ```java
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+public PessoaDTO atualizarStatus(Long codigo, Boolean ativo) {
+    Pessoa pessoaExistente = pessoaRepository.findById(codigo)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa não encontrada"));
 
-@Repository
-public interface PessoaRepository extends JpaRepository<Pessoa, Long> {
-    // Se necessário, adicione métodos de consulta customizados aqui.
+    if (pessoaExistente.getAtivo() != null && pessoaExistente.getAtivo().equals(ativo)) {
+        throw new IllegalArgumentException("O status 'ativo' já está definido como " + ativo + ".");
+    }
+    pessoaExistente.setAtivo(ativo);
+    Pessoa pessoaAtualizada = pessoaRepository.save(pessoaExistente);
+    return toDTO(pessoaAtualizada);
 }
 ```
 
-*O repositório permite interagir com a tabela `pessoa` do banco de dados.*
+### b) Método para deletar pessoa
+
+Remova o `@Transactional` deste método para garantir que o tratamento de exceção funcione corretamente:
+
+```java
+public void deletarPessoa(Long codigo) {
+    if (!pessoaRepository.existsById(codigo)) {
+        throw new RecursoNaoEncontradoException("Pessoa não encontrada");
+    }
+    try {
+        pessoaRepository.deleteById(codigo);
+    } catch (DataIntegrityViolationException ex) {
+        throw new RecursoEmUsoException("Pessoa em uso e não pode ser removida");
+    }
+}
+```
 
 ---
 
-## 3. Criação dos DTOs
+## 3. Atualize o DTO de Mensagem de Erro
 
-Utilizar DTOs ajuda a expor somente os dados necessários, evitando o acoplamento direto com a entidade. Crie, por exemplo, o `PessoaDTO` e, se necessário, o `EnderecoDTO`.
-
-### PessoaDTO
+Atualize o DTO para refletir o padrão de resposta de erro desejado, utilizando o tipo `Instant` para o timestamp:
 
 ```java
+package uea.edu.dsw.api_pagamentos.service.exception;
+
+import lombok.Data;
+import java.time.Instant;
+
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class PessoaDTO {
-    private Long codigo;
-    private String nome;
-    private Boolean ativo;
-    private EnderecoDTO endereco;
-}
-```
+public class ErrorResponse {
+    private int status;
+    private String error;
+    private Instant timestamp;
 
-### EnderecoDTO
-
-*Caso a classe `Endereco` possua atributos como logradouro, cidade, etc., crie um DTO correspondente:*
-
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class EnderecoDTO {
-    private String logradouro;
-    private String cidade;
-    private String estado;
-    private String cep;
+    public ErrorResponse(int status, String error, Instant timestamp) {
+        this.status = status;
+        this.error = error;
+        this.timestamp = timestamp;
+    }
 }
 ```
 
 ---
 
-## 4. Implementando o Serviço (PessoaService)
+## 4. Atualize o GlobalExceptionHandler
 
-Crie uma classe de serviço anotada com `@Service` para encapsular a lógica de negócio da entidade Pessoa. Essa camada usará o repositório e fará a conversão entre a entidade e o DTO.
+Configure o tratamento global de exceções, mapeando os status HTTP conforme o tipo de erro:
 
 ```java
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<ErrorResponse> handleRecursoNaoEncontradoException(RecursoNaoEncontradoException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                Instant.now());
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(RecursoEmUsoException.class)
+    public ResponseEntity<ErrorResponse> handleRecursoEmUsoException(RecursoEmUsoException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                Instant.now());
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                Instant.now());
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+}
+```
+
+> **Observação:** Ajustamos o nome do método de tratamento da exceção para recurso em uso para manter a consistência.
+
+---
+
+## 5. Criação do Controller e Integração com o Service
+
+Implemente (ou ajuste) o controller que expõe os endpoints e delega a lógica para o `PessoaService`. Segue um exemplo simplificado:
+
+```java
+package com.exemplo.controller;
+
 import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import uea.edu.dsw.api_pagamentos.dto.PessoaDTO;
+import uea.edu.dsw.api_pagamentos.service.PessoaService;
 
-@Service
-public class PessoaService {
+@RestController
+@RequestMapping("/pessoas")
+public class PessoaController {
 
-    private final PessoaRepository pessoaRepository;
+    private final PessoaService pessoaService;
 
-    public PessoaService(PessoaRepository pessoaRepository) {
-        this.pessoaRepository = pessoaRepository;
+    public PessoaController(PessoaService pessoaService) {
+        this.pessoaService = pessoaService;
     }
 
-    // Método para converter Pessoa em PessoaDTO
-    private PessoaDTO toDTO(Pessoa pessoa) {
-        PessoaDTO dto = new PessoaDTO();
-        dto.setCodigo(pessoa.getCodigo());
-        dto.setNome(pessoa.getNome());
-        dto.setAtivo(pessoa.getAtivo());
-        if (pessoa.getEndereco() != null) {
-            EnderecoDTO enderecoDTO = new EnderecoDTO();
-            enderecoDTO.setLogradouro(pessoa.getEndereco().getLogradouro());
-            enderecoDTO.setCidade(pessoa.getEndereco().getCidade());
-            enderecoDTO.setEstado(pessoa.getEndereco().getEstado());
-            enderecoDTO.setCep(pessoa.getEndereco().getCep());
-            dto.setEndereco(enderecoDTO);
-        }
-        return dto;
-    }
-
-    // Método para converter PessoaDTO em Pessoa
-    private Pessoa toEntity(PessoaDTO dto) {
-        Pessoa pessoa = new Pessoa();
-        pessoa.setCodigo(dto.getCodigo());
-        pessoa.setNome(dto.getNome());
-        pessoa.setAtivo(dto.getAtivo());
-        if (dto.getEndereco() != null) {
-            Endereco endereco = new Endereco();
-            endereco.setLogradouro(dto.getEndereco().getLogradouro());
-            endereco.setCidade(dto.getEndereco().getCidade());
-            endereco.setEstado(dto.getEndereco().getEstado());
-            endereco.setCep(dto.getEndereco().getCep());
-            pessoa.setEndereco(endereco);
-        }
-        return pessoa;
-    }
-
-    @Transactional
-    public PessoaDTO criarPessoa(PessoaDTO pessoaDTO) {
-        Pessoa pessoa = toEntity(pessoaDTO);
-        Pessoa savedPessoa = pessoaRepository.save(pessoa);
-        return toDTO(savedPessoa);
-    }
-
-    public PessoaDTO buscarPessoaPorCodigo(Long codigo) {
-        Pessoa pessoa = pessoaRepository.findById(codigo)
-                .orElseThrow(() -> new RuntimeException("Pessoa não encontrada"));
-        return toDTO(pessoa);
-    }
-
+    // GET /pessoas
+    @GetMapping
     public List<PessoaDTO> listarPessoas() {
-        return pessoaRepository.findAll().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return pessoaService.listarPessoas();
     }
 
-    @Transactional
-    public PessoaDTO atualizarPessoa(Long codigo, PessoaDTO pessoaDTO) {
-        Pessoa pessoaExistente = pessoaRepository.findById(codigo)
-                .orElseThrow(() -> new RuntimeException("Pessoa não encontrada"));
-
-        pessoaExistente.setNome(pessoaDTO.getNome());
-        pessoaExistente.setAtivo(pessoaDTO.getAtivo());
-        if (pessoaDTO.getEndereco() != null) {
-            Endereco endereco = new Endereco();
-            endereco.setLogradouro(pessoaDTO.getEndereco().getLogradouro());
-            endereco.setCidade(pessoaDTO.getEndereco().getCidade());
-            endereco.setEstado(pessoaDTO.getEndereco().getEstado());
-            endereco.setCep(pessoaDTO.getEndereco().getCep());
-            pessoaExistente.setEndereco(endereco);
-        }
-
-        Pessoa updatedPessoa = pessoaRepository.save(pessoaExistente);
-        return toDTO(updatedPessoa);
+    // GET /pessoas/{codigo}
+    @GetMapping("/{codigo}")
+    public PessoaDTO buscarPessoa(@PathVariable Long codigo) {
+        return pessoaService.buscarPessoaPorCodigo(codigo);
     }
 
-    @Transactional
-    public void deletarPessoa(Long codigo) {
-        if (!pessoaRepository.existsById(codigo)) {
-            throw new RecursoNaoEncontradoException("Pessoa não encontrada");
-        }
-        try {
-            pessoaRepository.deleteById(codigo);
-        } catch (DataIntegrityViolationException e) {
-            throw new RecursoEmUsoException("Pessoa em uso e não pode ser removida");
-        }
+    // POST /pessoas
+    @PostMapping
+    public ResponseEntity<PessoaDTO> criarPessoa(@RequestBody PessoaDTO pessoaDTO) {
+        PessoaDTO pessoaCriada = pessoaService.criarPessoa(pessoaDTO);
+        return new ResponseEntity<>(pessoaCriada, HttpStatus.CREATED);
+    }
 
+    // PUT /pessoas/{codigo}
+    @PutMapping("/{codigo}")
+    public PessoaDTO atualizarPessoa(@PathVariable Long codigo, @RequestBody PessoaDTO pessoaDTO) {
+        return pessoaService.atualizarPessoa(codigo, pessoaDTO);
+    }
+
+    // DELETE /pessoas/{codigo}
+    @DeleteMapping("/{codigo}")
+    public ResponseEntity<Void> deletarPessoa(@PathVariable Long codigo) {
+        pessoaService.deletarPessoa(codigo);
+        return ResponseEntity.noContent().build();
+    }
+
+    // PATCH /pessoas/{codigo}/ativo
+    @PatchMapping("/{codigo}/ativo")
+    public PessoaDTO atualizarStatus(@PathVariable Long codigo, @RequestBody Boolean ativo) {
+        return pessoaService.atualizarStatus(codigo, ativo);
     }
 }
 ```
 
-*Nesse serviço, métodos básicos de CRUD foram implementados, com conversão entre Pessoa e PessoaDTO para manter o acoplamento baixo entre as camadas.*
+> **Dica:** Embora o método de atualização de status utilize `PATCH` neste exemplo, você pode optar por `PUT` se preferir. Lembre-se de que o endpoint de atualização de status lança uma exceção se o status enviado já estiver definido.
 
 ---
 
-## 5. Realize o commit, push e abra um Pull Request para essa issue
- -  Após validar que os dados foram carregados corretamente, efetue o commit das alterações e faça o push para o repositório remoto.
-   ```
+## 6. Testando a API
+
+Utilize ferramentas como [Insomnia](https://insomnia.rest/), Postman ou cURL para testar os endpoints:
+
+- **Listar todas as pessoas:**  
+  `GET http://localhost:8080/pessoas`
+
+- **Buscar pessoa por código:**  
+  `GET http://localhost:8080/pessoas/1`
+
+- **Criar uma nova pessoa:**  
+  `POST http://localhost:8080/pessoas`  
+  Corpo (JSON):
+  ```json
+  {
+    "nome": "João Silva",
+    "ativo": true,
+    "endereco": {
+      "logradouro": "Rua do Abacaxi",
+      "cidade": "Uberlândia",
+      "estado": "MG",
+      "cep": "38400-012"
+    }
+  }
+  ```
+
+- **Atualizar uma pessoa:**  
+  `PUT http://localhost:8080/pessoas/1`  
+  Corpo (JSON):
+  ```json
+  {
+    "codigo": 1,
+    "nome": "João Silva Cavalcante",
+    "ativo": true,
+    "endereco": {
+      "logradouro": "Rua do Abacaxi",
+      "cidade": "Itacoatiara",
+      "estado": "AM",
+      "cep": "69102-120"
+    }
+  }
+  ```
+
+- **Deletar uma pessoa:**  
+  `DELETE http://localhost:8080/pessoas/1`
+
+- **Atualizar o status de ativação:**  
+  `PATCH http://localhost:8080/pessoas/1/ativo`  
+  Corpo (JSON):
+  ```json
+  true
+  ```
+
+---
+
+## 7. Commit, Push e Pull Request
+
+Após validar que a API está funcionando conforme esperado:
+
+1. Faça o commit das alterações:
+   ```bash
    git add .
-   git commit -m "5-5-criação-do-repositório-e-serviço-para-pessoas"
-   git push 
+   git commit -m "6-6: Implementar endpoints de pessoas e tratamento de exceções"
    ```
 
-- Em seguida, abra um Pull Request (PR) na branch de destino, descrevendo as alterações realizadas. Certifique-se de que o PR esteja de acordo com as diretrizes do projeto para revisão e integração.
+2. Envie as alterações para o repositório remoto:
+   ```bash
+   git push
+   ```
 
-## 6. Sincronize a branch main do diretório local
+3. Abra um Pull Request (PR) na branch de destino, seguindo as diretrizes do projeto para revisão e integração.
 
-- No diretório local, retorne para a branch main e atualize com o diretório remoto.
-```
+---
+
+## 8. Sincronize a Branch Main no Ambiente Local
+
+Após a integração, atualize sua branch `main`:
+
+```bash
 git checkout main
 git pull
 ```
+
+---
+
+## Considerações Finais
+
+- **Tratamento de Erros:**  
+  Caso o código informado não corresponda a uma pessoa existente, o método de busca lança a exceção `RecursoNaoEncontradoException` (tratada com status 404). Se ocorrer um erro de integridade (por exemplo, tentativa de deletar uma pessoa em uso), é lançada a `RecursoEmUsoException` (status 409). Para atualizações com status já definido, a exceção `IllegalArgumentException` é lançada (status 409).
+
+- **Boas Práticas:**  
+  Considere a utilização de DTOs para separar a camada de domínio da representação dos dados na API e o uso de anotações como `@Valid` para validação dos dados de entrada.
+
+---
