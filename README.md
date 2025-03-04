@@ -269,6 +269,12 @@ Após validar que a API está funcionando conforme esperado:
 
 ## 8. Sincronize a Branch Main no Ambiente Local
 
+Fecha o Milestone 2 e crie a release v2.0.0
+
+---
+
+## 9. Sincronize a Branch Main no Ambiente Local
+
 Após a integração, atualize sua branch `main`:
 
 ```bash
