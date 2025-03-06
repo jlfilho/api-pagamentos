@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import jakarta.validation.Valid;
 import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
 import uea.edu.dsw.api_pagamentos.dto.LancamentoFilterDTO;
 import uea.edu.dsw.api_pagamentos.dto.ResumoLancamentoDTO;
@@ -47,7 +48,7 @@ public class LancamentoController {
 
     // POST /lancamentos
     @PostMapping
-    public ResponseEntity<LancamentoDTO> criarLancamento(@RequestBody LancamentoDTO lancamentoDTO) {
+    public ResponseEntity<LancamentoDTO> criarLancamento(@Valid @RequestBody LancamentoDTO lancamentoDTO) {
         LancamentoDTO lancamentoCriado = lancamentoService.criarLancamento(lancamentoDTO);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{codigo}")
@@ -58,7 +59,7 @@ public class LancamentoController {
 
     // PUT /lancamentos/{codigo}
     @PutMapping("/{codigo}")
-    public ResponseEntity<LancamentoDTO> atualizarLancamento(@PathVariable Long codigo,
+    public ResponseEntity<LancamentoDTO> atualizarLancamento(@Valid @PathVariable Long codigo,
             @RequestBody LancamentoDTO lancamentoDTO) {
         LancamentoDTO lancamentoAtualizado = lancamentoService.atualizarLancamento(codigo, lancamentoDTO);
         return ResponseEntity.ok(lancamentoAtualizado);

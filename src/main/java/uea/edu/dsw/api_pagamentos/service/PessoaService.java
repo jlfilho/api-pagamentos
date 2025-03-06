@@ -7,7 +7,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
-import uea.edu.dsw.api_pagamentos.dto.EnderecoDTO;
 import uea.edu.dsw.api_pagamentos.dto.PessoaDTO;
 import uea.edu.dsw.api_pagamentos.model.Endereco;
 import uea.edu.dsw.api_pagamentos.model.Pessoa;
@@ -29,14 +28,7 @@ public class PessoaService {
         dto.setCodigo(pessoa.getCodigo());
         dto.setNome(pessoa.getNome());
         dto.setAtivo(pessoa.getAtivo());
-        if (pessoa.getEndereco() != null) {
-            EnderecoDTO enderecoDTO = new EnderecoDTO();
-            enderecoDTO.setLogradouro(pessoa.getEndereco().getLogradouro());
-            enderecoDTO.setCidade(pessoa.getEndereco().getCidade());
-            enderecoDTO.setEstado(pessoa.getEndereco().getEstado());
-            enderecoDTO.setCep(pessoa.getEndereco().getCep());
-            dto.setEndereco(enderecoDTO);
-        }
+        dto.setEndereco(pessoa.getEndereco());
         return dto;
     }
 
@@ -46,14 +38,7 @@ public class PessoaService {
         pessoa.setCodigo(dto.getCodigo());
         pessoa.setNome(dto.getNome());
         pessoa.setAtivo(dto.getAtivo());
-        if (dto.getEndereco() != null) {
-            Endereco endereco = new Endereco();
-            endereco.setLogradouro(dto.getEndereco().getLogradouro());
-            endereco.setCidade(dto.getEndereco().getCidade());
-            endereco.setEstado(dto.getEndereco().getEstado());
-            endereco.setCep(dto.getEndereco().getCep());
-            pessoa.setEndereco(endereco);
-        }
+        pessoa.setEndereco(dto.getEndereco());
         return pessoa;
     }
 
