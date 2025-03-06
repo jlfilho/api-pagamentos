@@ -1,246 +1,197 @@
-# Tutorial: Criação do repositório e serviço para Lançamento
+# Tutorial: Implementar Endpoints de Lançamento
+
+Este tutorial orienta a implementação dos endpoints para gerenciamento de lançamentos, incluindo o tratamento de exceções para recurso não encontrado e recurso em uso.
 
 ---
 
-### 1. Criação da Branch no Git
+## 1. Criação da Branch no Git
 
-No repositório remoto, crie a branch para implementar a nova funcionalidade. No ambiente local, execute os seguintes comandos para buscar e mudar para a branch:
+No repositório remoto (GitHub), crie uma branch para implementar a nova issue. Em seguida, no ambiente local, execute:
 
 ```bash
 git fetch origin
-git checkout -b 7-7-criação-do-repositório-e-serviço-para-lançamentos origin/main
+git checkout 8-8-implementar-endpoints-de-lançamentos
 ```
 
-Esses comandos criam e sincronizam a branch **7-7-criação-do-repositório-e-serviço-para-lançamentos** com o repositório remoto.
+Esses comandos trazem a branch `8-8-implementar-endpoints-de-lançamentos` do repositório remoto para o ambiente local.
 
 ---
 
-### 2. Implementando o Repositório (LancamentoRepository)
+## 2. Atualize o LancamentoService
 
-Crie uma interface que estenda o `JpaRepository` para a entidade `Lancamento`. Dessa forma, você terá acesso às operações CRUD sem a necessidade de implementá-las manualmente.
+Abra o arquivo `LancamentoService` e adicione (ou atualize) os métodos para gerenciar o lançamento. Em especial:
 
-```java
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+### a) Método para deletar lançamento
 
-import uea.edu.dsw.api_pagamentos.model.Lancamento;
-
-@Repository
-public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
-    // Adicione métodos customizados, se necessário.
-}
-```
-
-Esse repositório permitirá interagir com a tabela **lancamento** no banco de dados.
-
----
-
-### 3. Criação dos DTOs
-
-Utilizar DTOs ajuda a expor somente os dados necessários, evitando o acoplamento direto com a entidade.
-
-#### LancamentoDTO
-
-Crie um DTO para a entidade `Lancamento`, incluindo os campos e também as referências às entidades relacionadas (Categoria e Pessoa), podendo ser representadas por DTOs simplificados:
+Remova o `@Transactional` deste método para garantir que o tratamento de exceção funcione corretamente:
 
 ```java
-import java.math.BigDecimal;
-import java.time.LocalDate;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import uea.edu.dsw.api_pagamentos.model.Categoria;
-import uea.edu.dsw.api_pagamentos.model.TipoLancamento;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class LancamentoDTO {
-    private Long codigo;
-    private String descricao;
-    private BigDecimal valor;
-    private LocalDate dataVencimento;
-    private LocalDate dataPagamento;
-    private String observacao;
-    private TipoLancamento tipo;
-    private CategoriaDTO categoria;
-    private PessoaDTO pessoa;
-}
-```
-
-#### PessoaDTO (Exemplo)
-
-Se já existir o DTO para Pessoa, você pode utilizá-lo diretamente. Caso contrário, segue um exemplo básico:
-
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class PessoaDTO {
-    private Long codigo;
-    private String nome;
+public void deletarLancamento(Long codigo) {
+    if (!lancamentoRepository.existsById(codigo)) {
+        throw new RecursoNaoEncontradoException("Lançamento não encontrado");
+    }
+    try {
+        lancamentoRepository.deleteById(codigo);
+    } catch (DataIntegrityViolationException ex) {
+        throw new RecursoEmUsoException("Lançamento em uso e não pode ser removido");
+    }
 }
 ```
 
 ---
 
-### 4. Implementando o Serviço (LancamentoService)
+## 3. Criação do Controller e Integração com o Service
 
-Crie uma classe de serviço anotada com `@Service` para encapsular a lógica de negócio da entidade `Lancamento`. Nessa camada, serão realizadas as conversões entre a entidade e o DTO e implementadas as operações de CRUD.
+Implemente (ou ajuste) o controller que expõe os endpoints e delega a lógica para o `LancamentoService`. Segue um exemplo simplificado:
 
 ```java
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+package com.exemplo.controller;
+
+import java.net.URI;
+import java.util.List;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
-import uea.edu.dsw.api_pagamentos.dto.PessoaDTO;
-import uea.edu.dsw.api_pagamentos.model.Categoria;
-import uea.edu.dsw.api_pagamentos.model.Lancamento;
-import uea.edu.dsw.api_pagamentos.model.Pessoa;
-import uea.edu.dsw.api_pagamentos.repository.LancamentoRepository;
-import uea.edu.dsw.api_pagamentos.service.exception.RecursoEmUsoException;
-import uea.edu.dsw.api_pagamentos.service.exception.RecursoNaoEncontradoException;
+import uea.edu.dsw.api_pagamentos.service.LancamentoService;
 
-import java.util.List;
-import java.util.stream.Collectors;
+@RestController
+@RequestMapping("/lancamentos")
+public class LancamentoController {
 
-@Service
-public class LancamentoService {
+    private final LancamentoService lancamentoService;
 
-    private final LancamentoRepository lancamentoRepository;
-
-    public LancamentoService(LancamentoRepository lancamentoRepository) {
-        this.lancamentoRepository = lancamentoRepository;
+    public LancamentoController(LancamentoService lancamentoService) {
+        this.lancamentoService = lancamentoService;
     }
 
-    // Método para converter Lancamento em LancamentoDTO
-    private LancamentoDTO toDTO(Lancamento lancamento) {
-        LancamentoDTO dto = new LancamentoDTO();
-        dto.setCodigo(lancamento.getCodigo());
-        dto.setDescricao(lancamento.getDescricao());
-        dto.setValor(lancamento.getValor());
-        dto.setDataVencimento(lancamento.getDataVencimento());
-        dto.setDataPagamento(lancamento.getDataPagamento());
-        dto.setObservacao(lancamento.getObservacao());
-        dto.setTipo(lancamento.getTipo());
-        dto.setCategoria(lancamento.getCategoria());
-        if (lancamento.getPessoa() != null) {
-            PessoaDTO pessoaDTO = new PessoaDTO();
-            pessoaDTO.setCodigo(lancamento.getPessoa().getCodigo());
-            pessoaDTO.setNome(lancamento.getPessoa().getNome());
-            dto.setPessoa(pessoaDTO);
+    // GET /lancamentos
+    @GetMapping
+    public ResponseEntity<List<LancamentoDTO>> listarLancamentos() {
+        List<LancamentoDTO> lancamentos = lancamentoService.listarLancamentos();
+        if (lancamentos.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
-        return dto;
+        return ResponseEntity.ok(lancamentos);
     }
 
-    // Método para converter LancamentoDTO em Lancamento
-    private Lancamento toEntity(LancamentoDTO dto) {
-        Lancamento lancamento = new Lancamento();
-        lancamento.setCodigo(dto.getCodigo());
-        lancamento.setDescricao(dto.getDescricao());
-        lancamento.setValor(dto.getValor());
-        lancamento.setDataVencimento(dto.getDataVencimento());
-        lancamento.setDataPagamento(dto.getDataPagamento());
-        lancamento.setObservacao(dto.getObservacao());
-        lancamento.setTipo(dto.getTipo());
-        lancamento.setCategoria(dto.getCategoria());
-        if (dto.getPessoa() != null) {
-            Pessoa pessoa = new Pessoa();
-            pessoa.setCodigo(dto.getPessoa().getCodigo());
-            pessoa.setNome(dto.getPessoa().getNome());
-            lancamento.setPessoa(pessoa);
-        }
-        return lancamento;
+    // GET /lancamentos/{codigo}
+    @GetMapping("/{codigo}")
+    public ResponseEntity<LancamentoDTO> buscarLancamento(@PathVariable Long codigo) {
+        LancamentoDTO lancamento = lancamentoService.buscarLancamentoPorCodigo(codigo);
+        return ResponseEntity.ok(lancamento);
     }
 
-    @Transactional
-    public LancamentoDTO criarLancamento(LancamentoDTO lancamentoDTO) {
-        Lancamento lancamento = toEntity(lancamentoDTO);
-        Lancamento savedLancamento = lancamentoRepository.save(lancamento);
-        return toDTO(savedLancamento);
+    // POST /lancamentos
+    @PostMapping
+    public ResponseEntity<LancamentoDTO> criarLancamento(@RequestBody LancamentoDTO lancamentoDTO) {
+        LancamentoDTO lancamentoCriado = lancamentoService.criarLancamento(lancamentoDTO);
+        URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{codigo}")
+                .buildAndExpand(lancamentoCriado.getCodigo())
+                .toUri();
+        return ResponseEntity.created(uri).body(lancamentoCriado);
     }
 
-    public LancamentoDTO buscarLancamentoPorCodigo(Long codigo) {
-        Lancamento lancamento = lancamentoRepository.findById(codigo)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Lançamento não encontrado"));
-        return toDTO(lancamento);
+    // PUT /lancamentos/{codigo}
+    @PutMapping("/{codigo}")
+    public ResponseEntity<LancamentoDTO> atualizarLancamento(@PathVariable Long codigo,
+            @RequestBody LancamentoDTO lancamentoDTO) {
+        LancamentoDTO lancamentoAtualizado = lancamentoService.atualizarLancamento(codigo, lancamentoDTO);
+        return ResponseEntity.ok(lancamentoAtualizado);
     }
 
-    public List<LancamentoDTO> listarLancamentos() {
-        return lancamentoRepository.findAll().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public LancamentoDTO atualizarLancamento(Long codigo, LancamentoDTO lancamentoDTO) {
-        Lancamento lancamentoExistente = lancamentoRepository.findById(codigo)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Lançamento não encontrado"));
-
-        lancamentoExistente.setDescricao(lancamentoDTO.getDescricao());
-        lancamentoExistente.setValor(lancamentoDTO.getValor());
-        lancamentoExistente.setDataVencimento(lancamentoDTO.getDataVencimento());
-        lancamentoExistente.setDataPagamento(lancamentoDTO.getDataPagamento());
-        lancamentoExistente.setObservacao(lancamentoDTO.getObservacao());
-        lancamentoExistente.setTipo(lancamentoDTO.getTipo());
-
-        if (lancamentoDTO.getCategoria() != null) {
-            Categoria categoria = new Categoria();
-            categoria.setCodigo(lancamentoDTO.getCategoria().getCodigo());
-            categoria.setNome(lancamentoDTO.getCategoria().getNome());
-            lancamentoExistente.setCategoria(categoria);
-        }
-        if (lancamentoDTO.getPessoa() != null) {
-            Pessoa pessoa = new Pessoa();
-            pessoa.setCodigo(lancamentoDTO.getPessoa().getCodigo());
-            pessoa.setNome(lancamentoDTO.getPessoa().getNome());
-            lancamentoExistente.setPessoa(pessoa);
-        }
-
-        Lancamento LancamentoAtualizado = lancamentoRepository.save(lancamentoExistente);
-        return toDTO(LancamentoAtualizado);
-    }
-
-    @Transactional
-    public void deletarLancamento(Long codigo) {
-        if (!lancamentoRepository.existsById(codigo)) {
-            throw new RecursoNaoEncontradoException("Lançamento não encontrado");
-        }
-        try {
-            lancamentoRepository.deleteById(codigo);
-        } catch (Exception e) {
-            throw new RecursoEmUsoException("Lançamento em uso e não pode ser removido");
-        }
+    // DELETE /lancamentos/{codigo}
+    @DeleteMapping("/{codigo}")
+    public ResponseEntity<Void> deletarLancamento(@PathVariable Long codigo) {
+        lancamentoService.deletarLancamento(codigo);
+        return ResponseEntity.noContent().build();
     }
 }
 ```
 
-Nesse serviço, os métodos básicos de CRUD foram implementados, com conversão entre `Lancamento` e `LancamentoDTO` para manter o acoplamento baixo entre as camadas.
+---
+
+## 4. Testando a API
+
+Utilize ferramentas como Insomnia, Postman ou cURL para testar os endpoints:
+
+- **Listar todos os lançamentos:**
+  - **GET** `http://localhost:8080/lancamentos`
+
+- **Buscar lançamento por código:**
+  - **GET** `http://localhost:8080/lancamentos/1`
+
+- **Criar um novo lançamento:**
+  - **POST** `http://localhost:8080/lancamentos`  
+  - **Corpo (JSON):**
+    ```json
+    {
+		"descricao": "Bahamas",
+		"valor": 100.32,
+		"dataVencimento": "2017-02-10",
+		"dataPagamento": "2017-02-10",
+		"observacao": null,
+		"tipo": "DESPESA",
+		"categoria": {
+			"codigo": 2
+		},
+		"pessoa": {
+			"codigo": 2
+		}
+	}
+    ```
+
+- **Atualizar um lançamento:**
+  - **PUT** `http://localhost:8080/lancamentos/1`  
+  - **Corpo (JSON):**
+    ```json
+    {
+		"descricao": "Bahamas",
+		"valor": 110.32,
+		"dataVencimento": "2017-02-10",
+		"dataPagamento": "2017-02-10",
+		"observacao": null,
+		"tipo": "DESPESA",
+		"categoria": {
+			"codigo": 2
+		},
+		"pessoa": {
+			"codigo": 2
+		}
+	}
+    ```
+
+- **Deletar um lançamento:**
+  - **DELETE** `http://localhost:8080/lancamentos/1`
 
 ---
 
-### 5. Commit, Push e Pull Request
+## 5. Commit, Push e Pull Request
 
-Após validar que a aplicação está funcionando conforme o esperado, efetue o commit das alterações e faça o push para o repositório remoto:
+Após validar que a API está funcionando conforme esperado:
 
-```bash
-git add .
-git commit -m "7-7-criação-do-repositório-e-serviço-para-lançamentos"
-git push origin 7-7-criação-do-repositório-e-serviço-para-lançamentos
-```
-
-Em seguida, abra um Pull Request (PR) na branch de destino (geralmente a branch **main**), descrevendo detalhadamente as alterações realizadas e seguindo as diretrizes do projeto para revisão e integração.
+1. Faça o commit das alterações:
+   ```bash
+   git add .
+   git commit -m "8-8-implementar-endpoints-de-lançamentos"
+   ```
+2. Envie as alterações para o repositório remoto:
+   ```bash
+   git push
+   ```
+3. Abra um Pull Request (PR) na branch de destino, seguindo as diretrizes do projeto para revisão e integração.
 
 ---
 
-### 6. Sincronizando a Branch Main no Ambiente Local
+## 6. Sincronize a Branch Main no Ambiente Local
 
-Após a aprovação e merge do PR, sincronize sua branch main localmente:
+Após a integração, atualize sua branch main:
 
 ```bash
 git checkout main
-git pull origin main
+git pull
 ```
 
 ---
