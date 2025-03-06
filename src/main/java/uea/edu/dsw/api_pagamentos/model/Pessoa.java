@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,8 @@ public class Pessoa {
     @NotNull
     private Boolean ativo;
 
+    @NotNull(message = "O endereço é obrigatório")
+    @Valid
     @Embedded
     private Endereco endereco;
 }
