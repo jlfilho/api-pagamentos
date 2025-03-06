@@ -11,6 +11,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
 import uea.edu.dsw.api_pagamentos.dto.LancamentoFilterDTO;
+import uea.edu.dsw.api_pagamentos.dto.ResumoLancamentoDTO;
 import uea.edu.dsw.api_pagamentos.service.LancamentoService;
 
 @RestController
@@ -23,10 +24,17 @@ public class LancamentoController {
         this.lancamentoService = lancamentoService;
     }
 
-    // GET /lancamentos
-    @GetMapping
-    public ResponseEntity<Page<LancamentoDTO>> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
-        Page<LancamentoDTO> lancamentos = lancamentoService.pesquisar(lancamentoFilter, pageable);
+     // GET /lancamentos
+     @GetMapping
+     public ResponseEntity<Page<LancamentoDTO>> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+         Page<LancamentoDTO> lancamentos = lancamentoService.pesquisar(lancamentoFilter, pageable);
+         return ResponseEntity.ok(lancamentos);
+     }
+
+    // GET /lancamentos/resumo
+    @GetMapping("/resumo")
+    public ResponseEntity<Page<ResumoLancamentoDTO>> resumir(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<ResumoLancamentoDTO> lancamentos = lancamentoService.resumir(lancamentoFilter, pageable);
         return ResponseEntity.ok(lancamentos);
     }
 
