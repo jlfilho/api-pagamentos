@@ -1,10 +1,14 @@
 package uea.edu.dsw.api_pagamentos.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
+import uea.edu.dsw.api_pagamentos.dto.LancamentoFilterDTO;
 import uea.edu.dsw.api_pagamentos.dto.PessoaDTO;
+import uea.edu.dsw.api_pagamentos.dto.ResumoLancamentoDTO;
 import uea.edu.dsw.api_pagamentos.model.Categoria;
 import uea.edu.dsw.api_pagamentos.model.Lancamento;
 import uea.edu.dsw.api_pagamentos.model.Pessoa;
@@ -44,6 +48,19 @@ public class LancamentoService {
         return dto;
     }
 
+    private ResumoLancamentoDTO toResumoDTO(Lancamento lancamento) {
+        ResumoLancamentoDTO dto = new ResumoLancamentoDTO();
+        dto.setCodigo(lancamento.getCodigo());
+        dto.setDescricao(lancamento.getDescricao());
+        dto.setValor(lancamento.getValor());
+        dto.setDataVencimento(lancamento.getDataVencimento());
+        dto.setDataPagamento(lancamento.getDataPagamento());
+        dto.setTipo(lancamento.getTipo());
+        dto.setCategoria(lancamento.getCategoria().getNome());
+        dto.setPessoa(lancamento.getPessoa().getNome());
+        return dto;
+    }
+
     // Método para converter LancamentoDTO em Lancamento
     private Lancamento toEntity(LancamentoDTO dto) {
         Lancamento lancamento = new Lancamento();
@@ -62,6 +79,26 @@ public class LancamentoService {
             lancamento.setPessoa(pessoa);
         }
         return lancamento;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LancamentoDTO> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<Lancamento> lancamentosPage = lancamentoRepository.filtrar(
+                lancamentoFilter.getDescricao(),
+                lancamentoFilter.getDataVencimentoDe(),
+                lancamentoFilter.getDataVencimentoAte(),
+                pageable);
+        return lancamentosPage.map(this::toDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ResumoLancamentoDTO> resumir(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<Lancamento> lancamentosPage = lancamentoRepository.filtrar(
+                lancamentoFilter.getDescricao(),
+                lancamentoFilter.getDataVencimentoDe(),
+                lancamentoFilter.getDataVencimentoAte(),
+                pageable);
+        return lancamentosPage.map(this::toResumoDTO);
     }
 
     @Transactional
