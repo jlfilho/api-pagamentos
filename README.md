@@ -1,334 +1,116 @@
-# Tutorial: 9. Validações 
+# Tutorial: 10. Validações 
 
-Este tutorial demonstra como implementar validações na sua aplicação, utilizando Bean Validation e as boas práticas de desenvolvimento.
+## 1. Introdução
 
----
+O Swagger (por meio da especificação OpenAPI) permite documentar, testar e visualizar interativamente os endpoints da sua API. No ecossistema Spring Boot, a forma mais atual e simples de integrar essa documentação é usando o [SpringDoc OpenAPI](https://springdoc.org/).
 
-## 1. Criação da Branch no Git
+## 2. Criação da Branch no Git
 
 No repositório remoto (GitHub), crie uma branch para implementar a nova issue. Em seguida, no ambiente local, execute os comandos:
 
 ```bash
 git fetch origin
-git checkout 9-9-validações-e-tratamento-de-erros
+git checkout 10-10-documentação-e-testes
 ```
 
-> **Observação:** Utilize o mesmo nome da branch tanto no repositório remoto quanto no local. Neste exemplo, usamos um nome sem acentos para evitar problemas de encoding.
+Observação: Utilize o mesmo nome da branch tanto no repositório remoto quanto no local. Neste exemplo, usamos um nome sem acentos para evitar problemas de encoding.
 
 ---
 
-## 2. Adicionando as Validações em Entidades e DTOs
+## 3. Adicionando a Dependência
 
-### 2.1 Atualizando a entidade **Endereco**
+Se o seu projeto utiliza Maven, adicione a dependência do SpringDoc OpenAPI no arquivo `pom.xml`:
 
-Remova o `EnderecoDTO` (caso exista) e atualize a entidade `Endereco` com as validações necessárias:
-
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Embeddable
-public class Endereco {
-   
-    @NotBlank(message = "O logradouro é obrigatório")
-    @Size(min = 5, max = 255, message = "O logradouro deve ter entre 5 e 255 caracteres")
-    private String logradouro;
-
-    @NotBlank(message = "O número é obrigatório")
-    @Size(max = 10, message = "O número não pode exceder 10 caracteres")
-    private String numero;
-
-    @Size(max = 255, message = "O complemento não pode exceder 255 caracteres")
-    private String complemento;
-
-    @NotBlank(message = "O bairro é obrigatório")
-    @Size(min = 3, max = 100, message = "O bairro deve ter entre 3 e 100 caracteres")
-    private String bairro;
-
-    @NotBlank(message = "O CEP é obrigatório")
-    @Pattern(regexp = "\\d{5}-\\d{3}", message = "O CEP deve seguir o formato 12345-678")
-    private String cep;
-
-    @NotBlank(message = "A cidade é obrigatória")
-    @Size(min = 3, max = 100, message = "A cidade deve ter entre 3 e 100 caracteres")
-    private String cidade;
-
-    @NotBlank(message = "O estado é obrigatório")
-    @Size(min = 2, max = 2, message = "O estado deve ter 2 caracteres (sigla)")
-    private String estado;
-}
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.7.0</version>
+</dependency>
 ```
 
-### 2.2 Atualizando a entidade **Pessoa** e o DTO **PessoaDTO**
+> Essas dependências são responsáveis por gerar a documentação OpenAPI e disponibilizar a interface do Swagger UI automaticamente.
 
-Atualize a entidade `Pessoa` para incluir a validação do atributo `endereco` em cascata, utilizando a anotação `@Valid`:
+---
 
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Entity
-@Table(name = "pessoa")
-public class Pessoa {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long codigo;
-    
-    @NotNull
-    @Size(min = 3, max = 50)
-    private String nome;
-    
-    @NotNull
-    private Boolean ativo;
+## 4. Configurando a Documentação
 
-    @NotNull(message = "O endereço é obrigatório")
-    @Valid
-    @Embedded
-    private Endereco endereco;
-}
-```
+Após adicionar a dependência, o SpringDoc já configura a documentação da sua API de forma automática. Por padrão:
 
-O DTO correspondente também deve refletir as mesmas validações:
+- O arquivo JSON da documentação estará disponível em:  
+  `http://localhost:8080/v3/api-docs`
+- A interface interativa do Swagger UI poderá ser acessada em:  
+  `http://localhost:8080/swagger-ui/index.html`
 
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class PessoaDTO {
-    private Long codigo;
-    
-    @NotNull
-    @Size(min = 3, max = 50)
-    private String nome;
-    
-    @NotNull
-    private Boolean ativo;
+Caso queira customizar algum aspecto (como título, descrição, versão, etc.), você pode criar um arquivo de configuração ou definir propriedades no `application.properties` ou `application.yml`. Por exemplo, adicionando no `application.properties`:
 
-    @NotNull(message = "O endereço é obrigatório")
-    @Valid
-    @Embedded
-    private Endereco endereco;
-}
-```
-
-### 2.3 Atualizando a entidade **Lancamento** e o DTO **LancamentoDTO**
-
-Na entidade `Lancamento`, inclua validações nos campos obrigatórios:
-
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Entity
-@Table(name = "lancamento")
-public class Lancamento {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long codigo;
-
-    @NotBlank(message = "A descrição é obrigatória")
-    @Size(max = 255, message = "A descrição deve ter no máximo 255 caracteres")
-    private String descricao;
-
-    @NotNull(message = "O valor é obrigatório")
-    @Positive(message = "O valor deve ser positivo")
-    private BigDecimal valor;
-
-    @NotNull(message = "A data de vencimento é obrigatória")
-    private LocalDate dataVencimento;
-
-    private LocalDate dataPagamento;
-
-    @Size(max = 500, message = "A observação deve ter no máximo 500 caracteres")
-    private String observacao;
-
-    @NotNull(message = "O tipo de lançamento é obrigatório")
-    @Enumerated(EnumType.STRING)
-    private TipoLancamento tipo;
-
-    @NotNull(message = "A categoria é obrigatória")
-    @ManyToOne
-    @JoinColumn(name = "categoria_codigo")
-    private Categoria categoria;
-
-    @NotNull(message = "A pessoa é obrigatória")
-    @ManyToOne
-    @JoinColumn(name = "pessoa_codigo")
-    private Pessoa pessoa;
-}
-```
-
-O DTO correspondente:
-
-```java
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class LancamentoDTO {
-    private Long codigo;
-    
-    @NotBlank(message = "A descrição é obrigatória")
-    @Size(max = 255, message = "A descrição deve ter no máximo 255 caracteres")
-    private String descricao;
-
-    @NotNull(message = "O valor é obrigatório")
-    @Positive(message = "O valor deve ser positivo")
-    private BigDecimal valor;
-
-    @NotNull(message = "A data de vencimento é obrigatória")
-    private LocalDate dataVencimento;
-
-    private LocalDate dataPagamento;
-
-    @Size(max = 500, message = "A observação deve ter no máximo 500 caracteres")
-    private String observacao;
-
-    @NotNull(message = "O tipo de lançamento é obrigatório")
-    private TipoLancamento tipo;
-
-    @NotNull(message = "A categoria é obrigatória")
-    private Categoria categoria;
-
-    @NotNull(message = "A pessoa é obrigatória")
-    private Pessoa pessoa;
-}
+```properties
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
 ```
 
 ---
 
-## 3. Atualizando os Métodos toDTO e toEntity nos Services
+## 5. Documentando os Endpoints
 
-### 3.1 Em PessoaService
-
-Adapte os métodos de conversão entre `Pessoa` e `PessoaDTO`:
+Para enriquecer a documentação, utilize as anotações do pacote `io.swagger.v3.oas.annotations` em seus controllers. Veja um exemplo:
 
 ```java
-// Converte Pessoa para PessoaDTO
-private PessoaDTO toDTO(Pessoa pessoa) {
-    PessoaDTO dto = new PessoaDTO();
-    dto.setCodigo(pessoa.getCodigo());
-    dto.setNome(pessoa.getNome());
-    dto.setAtivo(pessoa.getAtivo());
-    dto.setEndereco(pessoa.getEndereco());
-    return dto;
-}
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.Arrays;
+import java.util.List;
 
-// Converte PessoaDTO para Pessoa
-private Pessoa toEntity(PessoaDTO dto) {
-    Pessoa pessoa = new Pessoa();
-    pessoa.setCodigo(dto.getCodigo());
-    pessoa.setNome(dto.getNome());
-    pessoa.setAtivo(dto.getAtivo());
-    pessoa.setEndereco(dto.getEndereco());
-    return pessoa;
+@RestController
+public class UserController {
+
+    @Operation(summary = "Retorna a lista de usuários", description = "Endpoint para obter todos os usuários cadastrados")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),
+        @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    @GetMapping("/users")
+    public List<String> getUsers() {
+        return Arrays.asList("João", "Maria", "Pedro");
+    }
 }
 ```
 
-### 3.2 Em LancamentoService
-
-Adapte os métodos de conversão entre `Lancamento` e `LancamentoDTO`:
-
-```java
-// Converte Lancamento para LancamentoDTO
-private LancamentoDTO toDTO(Lancamento lancamento) {
-    LancamentoDTO dto = new LancamentoDTO();
-    dto.setCodigo(lancamento.getCodigo());
-    dto.setDescricao(lancamento.getDescricao());
-    dto.setValor(lancamento.getValor());
-    dto.setDataVencimento(lancamento.getDataVencimento());
-    dto.setDataPagamento(lancamento.getDataPagamento());
-    dto.setObservacao(lancamento.getObservacao());
-    dto.setTipo(lancamento.getTipo());
-    dto.setCategoria(lancamento.getCategoria());
-    dto.setPessoa(lancamento.getPessoa());
-    return dto;
-}
-
-// Converte LancamentoDTO para Lancamento
-private Lancamento toEntity(LancamentoDTO dto) {
-    Lancamento lancamento = new Lancamento();
-    lancamento.setCodigo(dto.getCodigo());
-    lancamento.setDescricao(dto.getDescricao());
-    lancamento.setValor(dto.getValor());
-    lancamento.setDataVencimento(dto.getDataVencimento());
-    lancamento.setDataPagamento(dto.getDataPagamento());
-    lancamento.setObservacao(dto.getObservacao());
-    lancamento.setTipo(dto.getTipo());
-    lancamento.setCategoria(dto.getCategoria());
-    lancamento.setPessoa(dto.getPessoa());
-    return lancamento;
-}
-```
+> As anotações `@Operation` e `@ApiResponses` ajudam a detalhar o que cada endpoint faz, quais respostas ele pode retornar, entre outras informações importantes.
 
 ---
 
-## 4. Atualizando os Endpoints nos Controllers
+## 6. Testando a Documentação
 
-### 4.1 PessoaController
+1. **Inicie a aplicação Spring Boot.**
+2. **Acesse o Swagger UI:**  
+   Abra o navegador e vá para [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html).
 
-Atualize os métodos POST e PUT para incluir a validação:
-
-```java
-@PutMapping("/{codigo}")
-public ResponseEntity<PessoaDTO> atualizarPessoa(@Valid @PathVariable Long codigo, @RequestBody PessoaDTO pessoa) {
-    PessoaDTO atualizada = pessoaService.atualizarPessoa(codigo, pessoa);
-    return ResponseEntity.ok(atualizada);
-}
-
-@PostMapping
-public ResponseEntity<PessoaDTO> criarPessoa(@Valid @RequestBody PessoaDTO pessoa) {
-    PessoaDTO criada = pessoaService.criarPessoa(pessoa);
-    URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-            .path("/{codigo}")
-            .buildAndExpand(criada.getCodigo())
-            .toUri();
-    return ResponseEntity.created(uri).body(criada);
-}
-```
-
-### 4.2 LancamentoController
-
-Atualize os endpoints POST e PUT:
-
-```java
-// POST /lancamentos
-@PostMapping
-public ResponseEntity<LancamentoDTO> criarLancamento(@Valid @RequestBody LancamentoDTO lancamentoDTO) {
-    LancamentoDTO lancamentoCriado = lancamentoService.criarLancamento(lancamentoDTO);
-    URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-            .path("/{codigo}")
-            .buildAndExpand(lancamentoCriado.getCodigo())
-            .toUri();
-    return ResponseEntity.created(uri).body(lancamentoCriado);
-}
-
-// PUT /lancamentos/{codigo}
-@PutMapping("/{codigo}")
-public ResponseEntity<LancamentoDTO> atualizarLancamento(@Valid @PathVariable Long codigo,
-        @RequestBody LancamentoDTO lancamentoDTO) {
-    LancamentoDTO lancamentoAtualizado = lancamentoService.atualizarLancamento(codigo, lancamentoDTO);
-    return ResponseEntity.ok(lancamentoAtualizado);
-}
-```
+Na interface do Swagger UI, você encontrará a documentação interativa da sua API, com a possibilidade de testar os endpoints diretamente.
 
 ---
 
-## 5. Testando os Endpoints
+## 7. Considerações Finais
 
-Utilize ferramentas como Insomnia, Postman ou cURL para testar os endpoints:
-- Envie requisições com dados válidos e inválidos.
-- Verifique se as regras de validação estão funcionando conforme esperado e se os erros são tratados corretamente.
+- **Atualização Automática:** Cada vez que você modificar os endpoints ou adicionar novas anotações, a documentação é atualizada automaticamente.
+- **Customização:** O SpringDoc permite personalizações adicionais, como a criação de um grupo de APIs ou a inclusão de informações de segurança. Consulte a [documentação oficial do SpringDoc](https://springdoc.org/) para mais detalhes.
+- **Outras Anotações:** Além das mostradas, existem outras anotações úteis, como `@Parameter` para parâmetros e `@Schema` para descrever modelos, que podem enriquecer ainda mais sua documentação.
 
----
+Com esses passos, você conseguirá integrar a documentação Swagger em seu projeto Spring Boot existente, facilitando o entendimento e o consumo da API por outros desenvolvedores.
 
-## 6. Commit, Push e Pull Request
+--- 
+
+## 8. Commit, Push e Pull Request
 
 Após confirmar que a API está funcionando conforme esperado:
 
 1. Faça o commit das alterações:
    ```bash
    git add .
-   git commit -m "9-9-validações-e-tratamento-de-erros"
+   git commit -m "10-10-documentação-e-testes"
    ```
 2. Envie as alterações para o repositório remoto:
    ```bash
@@ -338,7 +120,7 @@ Após confirmar que a API está funcionando conforme esperado:
 
 ---
 
-## 7. Sincronizando a Branch Main no Ambiente Local
+## 9. Sincronizando a Branch Main no Ambiente Local
 
 Após a integração, atualize sua branch main:
 
