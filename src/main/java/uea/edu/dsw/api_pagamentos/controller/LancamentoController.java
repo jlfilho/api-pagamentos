@@ -2,11 +2,15 @@ package uea.edu.dsw.api_pagamentos.controller;
 
 import java.net.URI;
 import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
+import uea.edu.dsw.api_pagamentos.dto.LancamentoFilterDTO;
 import uea.edu.dsw.api_pagamentos.service.LancamentoService;
 
 @RestController
@@ -21,11 +25,8 @@ public class LancamentoController {
 
     // GET /lancamentos
     @GetMapping
-    public ResponseEntity<List<LancamentoDTO>> listarLancamentos() {
-        List<LancamentoDTO> lancamentos = lancamentoService.listarLancamentos();
-        if (lancamentos.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
+    public ResponseEntity<Page<LancamentoDTO>> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<LancamentoDTO> lancamentos = lancamentoService.pesquisar(lancamentoFilter, pageable);
         return ResponseEntity.ok(lancamentos);
     }
 

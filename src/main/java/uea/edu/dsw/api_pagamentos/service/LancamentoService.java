@@ -1,9 +1,12 @@
 package uea.edu.dsw.api_pagamentos.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
+import uea.edu.dsw.api_pagamentos.dto.LancamentoFilterDTO;
 import uea.edu.dsw.api_pagamentos.dto.PessoaDTO;
 import uea.edu.dsw.api_pagamentos.model.Categoria;
 import uea.edu.dsw.api_pagamentos.model.Lancamento;
@@ -62,6 +65,16 @@ public class LancamentoService {
             lancamento.setPessoa(pessoa);
         }
         return lancamento;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LancamentoDTO> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<Lancamento> lancamentosPage = lancamentoRepository.filtrar(
+                lancamentoFilter.getDescricao(),
+                lancamentoFilter.getDataVencimentoDe(),
+                lancamentoFilter.getDataVencimentoAte(),
+                pageable);
+        return lancamentosPage.map(this::toDTO);
     }
 
     @Transactional

@@ -1,6 +1,4 @@
-# Tutorial: Implementar Endpoints de Lançamento
-
-Este tutorial orienta a implementação dos endpoints para gerenciamento de lançamentos, incluindo o tratamento de exceções para recurso não encontrado e recurso em uso.
+# Tutorial: 8.1. Implementar paginação, resumo de lançamento e filtros por parâmetro
 
 ---
 
@@ -10,161 +8,91 @@ No repositório remoto (GitHub), crie uma branch para implementar a nova issue. 
 
 ```bash
 git fetch origin
-git checkout 8-8-implementar-endpoints-de-lançamentos
+git checkout 22-81-implementar-paginação-resumo-de-lançamento-e-filtros-por-parâmetro
 ```
 
-Esses comandos trazem a branch `8-8-implementar-endpoints-de-lançamentos` do repositório remoto para o ambiente local.
+Esses comandos trazem a branch `22-81-implementar-paginação-resumo-de-lançamento-e-filtros-por-parâmetros` do repositório remoto para o ambiente local.
 
 ---
 
-## 2. Atualize o LancamentoService
-
-Abra o arquivo `LancamentoService` e adicione (ou atualize) os métodos para gerenciar o lançamento. Em especial:
-
-### a) Método para deletar lançamento
-
-Remova o `@Transactional` deste método para garantir que o tratamento de exceção funcione corretamente:
+## 2. Crie um DTO com os parâmetros do filtro desejado.
 
 ```java
-public void deletarLancamento(Long codigo) {
-    if (!lancamentoRepository.existsById(codigo)) {
-        throw new RecursoNaoEncontradoException("Lançamento não encontrado");
-    }
-    try {
-        lancamentoRepository.deleteById(codigo);
-    } catch (DataIntegrityViolationException ex) {
-        throw new RecursoEmUsoException("Lançamento em uso e não pode ser removido");
-    }
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class LancamentoFilterDTO {
+    private String descricao;
+	@DateTimeFormat(pattern = "yyyy-MM-dd")
+	private LocalDate dataVencimentoDe;
+	@DateTimeFormat(pattern = "yyyy-MM-dd")
+	private LocalDate dataVencimentoAte;
 }
 ```
 
 ---
 
-## 3. Criação do Controller e Integração com o Service
 
-Implemente (ou ajuste) o controller que expõe os endpoints e delega a lógica para o `LancamentoService`. Segue um exemplo simplificado:
+## 3. Crie a Query para pesquisar laçamentos usando filtros e paginação 
 
 ```java
-package com.exemplo.controller;
+@Query("SELECT l FROM Lancamento l " +
+                     "WHERE (:descricao IS NULL OR lower(l.descricao) LIKE lower(concat('%', :descricao, '%'))) " +
+                     "AND (:dataVencimentoDe IS NULL OR l.dataVencimento >= :dataVencimentoDe) " +
+                     "AND (:dataVencimentoAte IS NULL OR l.dataVencimento <= :dataVencimentoAte)")
+       Page<Lancamento> filtrar(@Param("descricao") String descricao,
+                     @Param("dataVencimentoDe") LocalDate dataVencimentoDe,
+                     @Param("dataVencimentoAte") LocalDate dataVencimentoAte,
+                     Pageable pageable);
+```
 
-import java.net.URI;
-import java.util.List;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+---
 
-import uea.edu.dsw.api_pagamentos.dto.LancamentoDTO;
-import uea.edu.dsw.api_pagamentos.service.LancamentoService;
+## 4. Crie em LancamentoService o método para pesquisar com paginação e filtro 
 
-@RestController
-@RequestMapping("/lancamentos")
-public class LancamentoController {
-
-    private final LancamentoService lancamentoService;
-
-    public LancamentoController(LancamentoService lancamentoService) {
-        this.lancamentoService = lancamentoService;
+```java
+@Transactional(readOnly = true)
+    public Page<LancamentoDTO> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<Lancamento> lancamentosPage = lancamentoRepository.filtrar(
+                lancamentoFilter.getDescricao(),
+                lancamentoFilter.getDataVencimentoDe(),
+                lancamentoFilter.getDataVencimentoAte(),
+                pageable);
+        return lancamentosPage.map(this::toDTO);
     }
+```
 
-    // GET /lancamentos
+---
+
+## 5. Crie em LancamentoController o método para pesquisar com paginação e filtro 
+
+```java
     @GetMapping
-    public ResponseEntity<List<LancamentoDTO>> listarLancamentos() {
-        List<LancamentoDTO> lancamentos = lancamentoService.listarLancamentos();
-        if (lancamentos.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
+    public ResponseEntity<Page<LancamentoDTO>> pesquisar(LancamentoFilterDTO lancamentoFilter, Pageable pageable) {
+        Page<LancamentoDTO> lancamentos = lancamentoService.pesquisar(lancamentoFilter, pageable);
         return ResponseEntity.ok(lancamentos);
     }
-
-    // GET /lancamentos/{codigo}
-    @GetMapping("/{codigo}")
-    public ResponseEntity<LancamentoDTO> buscarLancamento(@PathVariable Long codigo) {
-        LancamentoDTO lancamento = lancamentoService.buscarLancamentoPorCodigo(codigo);
-        return ResponseEntity.ok(lancamento);
-    }
-
-    // POST /lancamentos
-    @PostMapping
-    public ResponseEntity<LancamentoDTO> criarLancamento(@RequestBody LancamentoDTO lancamentoDTO) {
-        LancamentoDTO lancamentoCriado = lancamentoService.criarLancamento(lancamentoDTO);
-        URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{codigo}")
-                .buildAndExpand(lancamentoCriado.getCodigo())
-                .toUri();
-        return ResponseEntity.created(uri).body(lancamentoCriado);
-    }
-
-    // PUT /lancamentos/{codigo}
-    @PutMapping("/{codigo}")
-    public ResponseEntity<LancamentoDTO> atualizarLancamento(@PathVariable Long codigo,
-            @RequestBody LancamentoDTO lancamentoDTO) {
-        LancamentoDTO lancamentoAtualizado = lancamentoService.atualizarLancamento(codigo, lancamentoDTO);
-        return ResponseEntity.ok(lancamentoAtualizado);
-    }
-
-    // DELETE /lancamentos/{codigo}
-    @DeleteMapping("/{codigo}")
-    public ResponseEntity<Void> deletarLancamento(@PathVariable Long codigo) {
-        lancamentoService.deletarLancamento(codigo);
-        return ResponseEntity.noContent().build();
-    }
-}
 ```
 
----
+Remova o método `listarLancamentos`. 
 
-## 4. Testando a API
 
-Utilize ferramentas como Insomnia, Postman ou cURL para testar os endpoints:
+## 6. Testando a API
+
+Utilize ferramentas como Insomnia, Postman ou cURL para testar o endpoint com filtros e paginação:
 
 - **Listar todos os lançamentos:**
   - **GET** `http://localhost:8080/lancamentos`
+  
+- **Listar todos os lançamentos com filtro pelo parâmetro descriao:**
+  - **GET** `http://localhost:8080/lancamentos?descricao=bahamas`
 
-- **Buscar lançamento por código:**
-  - **GET** `http://localhost:8080/lancamentos/1`
+- **Listar todos os lançamentos com filtro por datas de vencimento:**
+  - **GET** `http://localhost:8080/lancamentos?dataVencimentoDe=2017-02-01&dataVencimentoAte=2017-04-30`
 
-- **Criar um novo lançamento:**
-  - **POST** `http://localhost:8080/lancamentos`  
-  - **Corpo (JSON):**
-    ```json
-    {
-		"descricao": "Bahamas",
-		"valor": 100.32,
-		"dataVencimento": "2017-02-10",
-		"dataPagamento": "2017-02-10",
-		"observacao": null,
-		"tipo": "DESPESA",
-		"categoria": {
-			"codigo": 2
-		},
-		"pessoa": {
-			"codigo": 2
-		}
-	}
-    ```
+- **Listar lançamentos por páginas:**
+  - **GET** `http://localhost:8080/lancamentos?page=0&size=3`
 
-- **Atualizar um lançamento:**
-  - **PUT** `http://localhost:8080/lancamentos/1`  
-  - **Corpo (JSON):**
-    ```json
-    {
-		"descricao": "Bahamas",
-		"valor": 110.32,
-		"dataVencimento": "2017-02-10",
-		"dataPagamento": "2017-02-10",
-		"observacao": null,
-		"tipo": "DESPESA",
-		"categoria": {
-			"codigo": 2
-		},
-		"pessoa": {
-			"codigo": 2
-		}
-	}
-    ```
-
-- **Deletar um lançamento:**
-  - **DELETE** `http://localhost:8080/lancamentos/1`
 
 ---
 
