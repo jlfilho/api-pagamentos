@@ -128,3 +128,9 @@ Após a integração, atualize sua branch main:
 git checkout main
 git pull
 ```
+
+---
+
+## 10. Feche a Milestone e faça o lançamento de da release v3.0.0
+
+Feche a Milestone e faça o lançamento de da release v3.0.0.
