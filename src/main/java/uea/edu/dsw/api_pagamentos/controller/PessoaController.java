@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -30,6 +31,7 @@ public class PessoaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<List<PessoaDTO>> listarPessoas() {
         List<PessoaDTO> pessoas = pessoaService.listarPessoas();
         if (pessoas.isEmpty()) {
@@ -39,12 +41,14 @@ public class PessoaController {
     }
 
     @GetMapping("/{codigo}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<PessoaDTO> buscarPessoa(@PathVariable Long codigo) {
         PessoaDTO pessoa = pessoaService.buscarPessoaPorCodigo(codigo);
         return ResponseEntity.ok(pessoa);
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<PessoaDTO> criarPessoa(@Valid @RequestBody PessoaDTO pessoa) {
         PessoaDTO criada = pessoaService.criarPessoa(pessoa);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -55,18 +59,21 @@ public class PessoaController {
     }
 
     @PutMapping("/{codigo}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<PessoaDTO> atualizarPessoa(@Valid @PathVariable Long codigo, @RequestBody PessoaDTO pessoa) {
         PessoaDTO atualizada = pessoaService.atualizarPessoa(codigo, pessoa);
         return ResponseEntity.ok(atualizada);
     }
 
     @DeleteMapping("/{codigo}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletarPessoa(@PathVariable Long codigo) {
         pessoaService.deletarPessoa(codigo);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{codigo}/ativo")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PessoaDTO> atualizarStatus(@PathVariable Long codigo, @RequestBody Boolean ativo) {
         PessoaDTO atualizada = pessoaService.atualizarStatus(codigo, ativo);
         return ResponseEntity.ok(atualizada);

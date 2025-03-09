@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +30,7 @@ public class CategoriaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<List<Categoria>> listarTodas() {
         List<Categoria> categorias = categoriaService.listarTodas();
         if (categorias.isEmpty()) {
@@ -38,12 +40,14 @@ public class CategoriaController {
     }
 
     @GetMapping("/{codigo}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<Categoria> buscarPorCodigo(@PathVariable Long codigo) {
         Categoria categoria = categoriaService.buscarPorCodigo(codigo);
         return ResponseEntity.ok(categoria);
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Categoria> criarCategoria(@Valid @RequestBody Categoria categoria) {
         Categoria novaCategoria = categoriaService.salvar(categoria);
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -54,12 +58,14 @@ public class CategoriaController {
     }
 
     @PutMapping("/{codigo}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Categoria> atualizarCategoria(@PathVariable Long codigo, @Valid @RequestBody Categoria categoria) {
         Categoria categoriaAtualizada = categoriaService.atualizar(codigo, categoria);
         return ResponseEntity.ok(categoriaAtualizada);
     }
 
     @DeleteMapping("/{codigo}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletarCategoria(@PathVariable Long codigo) {
         categoriaService.deletar(codigo);
         return ResponseEntity.noContent().build();
