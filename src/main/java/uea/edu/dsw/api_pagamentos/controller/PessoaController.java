@@ -3,6 +3,8 @@ package uea.edu.dsw.api_pagamentos.controller;
 import java.net.URI;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,11 +34,8 @@ public class PessoaController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    public ResponseEntity<List<PessoaDTO>> listarPessoas() {
-        List<PessoaDTO> pessoas = pessoaService.listarPessoas();
-        if (pessoas.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
+    public ResponseEntity<Page<PessoaDTO>> listarPessoas(String nome, Pageable pageable) {
+        Page<PessoaDTO> pessoas = pessoaService.listarPessoas(nome, pageable);
         return ResponseEntity.ok(pessoas);
     }
 
