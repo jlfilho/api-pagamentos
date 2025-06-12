@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class Endereco {
    
    @NotBlank(message = "O logradouro é obrigatório")
-    @Size(min = 5, max = 255, message = "O logradouro deve ter entre 5 e 255 caracteres")
+    @Size(min = 3, max = 255, message = "O logradouro deve ter entre 5 e 255 caracteres")
     private String logradouro;
 
     @NotBlank(message = "O número é obrigatório")

@@ -72,9 +72,12 @@ public class PessoaService {
         if (pessoaDTO.getEndereco() != null) {
             Endereco endereco = new Endereco();
             endereco.setLogradouro(pessoaDTO.getEndereco().getLogradouro());
+            endereco.setNumero(pessoaDTO.getEndereco().getNumero());
+            endereco.setComplemento(pessoaDTO.getEndereco().getComplemento());
+            endereco.setBairro(pessoaDTO.getEndereco().getBairro());            
+            endereco.setCep(pessoaDTO.getEndereco().getCep());
             endereco.setCidade(pessoaDTO.getEndereco().getCidade());
             endereco.setEstado(pessoaDTO.getEndereco().getEstado());
-            endereco.setCep(pessoaDTO.getEndereco().getCep());
             pessoaExistente.setEndereco(endereco);
         }
 
