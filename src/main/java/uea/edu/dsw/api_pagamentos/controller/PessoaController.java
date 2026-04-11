@@ -58,7 +58,7 @@ public class PessoaController {
 
     @PutMapping("/{codigo}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    public ResponseEntity<PessoaDTO> atualizarPessoa(@Valid @PathVariable Long codigo, @RequestBody PessoaDTO pessoa) {
+    public ResponseEntity<PessoaDTO> atualizarPessoa(@PathVariable Long codigo, @Valid @RequestBody PessoaDTO pessoa) {
         PessoaDTO atualizada = pessoaService.atualizarPessoa(codigo, pessoa);
         return ResponseEntity.ok(atualizada);
     }
