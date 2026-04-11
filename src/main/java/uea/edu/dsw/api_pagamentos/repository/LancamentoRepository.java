@@ -85,4 +85,16 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
                      @Param("dataInicio") LocalDate dataInicio,
                      @Param("dataFim") LocalDate dataFim,
                      Pageable pageable);
+
+       @Query("""
+                     SELECT l
+                     FROM Lancamento l
+                     WHERE l.tipo = uea.edu.dsw.api_pagamentos.model.TipoLancamento.RECEITA
+                       AND l.dataVencimento BETWEEN :dataInicio AND :dataFim
+                     ORDER BY l.valor DESC
+                     """)
+       List<Lancamento> buscarTopReceitasPorPeriodo(
+                     @Param("dataInicio") LocalDate dataInicio,
+                     @Param("dataFim") LocalDate dataFim,
+                     Pageable pageable);
 }
