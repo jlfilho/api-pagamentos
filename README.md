@@ -1,25 +1,56 @@
-# Tutorial: 11. Segurança e Autenticação com JWT
+﻿# Tutorial: 11. SeguranÃ§a e AutenticaÃ§Ã£o com JWT
 
-Este tutorial demonstra como implementar autenticação e segurança em uma API RESTful com Spring Boot, utilizando JWT (JSON Web Tokens) e a versão 0.11.5 do JJWT (dividida em módulos: jjwt-api, jjwt-impl e jjwt-jackson). O exemplo abrange desde a criação da branch no Git até a configuração completa dos componentes para geração, validação de tokens e proteção dos endpoints.
+Este tutorial demonstra como implementar autenticaÃ§Ã£o e seguranÃ§a em uma API RESTful com Spring Boot, utilizando JWT (JSON Web Tokens) e a versÃ£o 0.11.5 do JJWT (dividida em mÃ³dulos: jjwt-api, jjwt-impl e jjwt-jackson). O exemplo abrange desde a criaÃ§Ã£o da branch no Git atÃ© a configuraÃ§Ã£o completa dos componentes para geraÃ§Ã£o, validaÃ§Ã£o de tokens e proteÃ§Ã£o dos endpoints.
+
+## Como Executar Pelo CLI
+
+No diretorio raiz do projeto, execute:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+Para executar com perfil especifico:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE='dev'; .\mvnw.cmd spring-boot:run
+```
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE='prod'; .\mvnw.cmd spring-boot:run
+```
+
+Depois de subir a API, acesse a documentacao em:
+
+```text
+http://localhost:8080/swagger-ui.html
+```
+
+JSON OpenAPI:
+
+```text
+http://localhost:8080/v3/api-docs
+```
+
+Observacao: no perfil `prod`, a documentacao pode estar desabilitada por configuracao.
 
 ---
+## 1. CriaÃ§Ã£o da Branch no Git
 
-## 1. Criação da Branch no Git
-
-Antes de iniciar a implementação, crie uma branch para a nova funcionalidade no repositório remoto (por exemplo, GitHub). No ambiente local, execute os comandos:
+Antes de iniciar a implementaÃ§Ã£o, crie uma branch para a nova funcionalidade no repositÃ³rio remoto (por exemplo, GitHub). No ambiente local, execute os comandos:
 
 ```bash
 git fetch origin
 git checkout -b 11-11-implementar-autenticacao-e-seguranca-com-jwt
 ```
 
-> **Observação:** Use nomes de branch sem acentos para evitar problemas de encoding e mantenha o mesmo nome tanto no repositório remoto quanto local.
+> **ObservaÃ§Ã£o:** Use nomes de branch sem acentos para evitar problemas de encoding e mantenha o mesmo nome tanto no repositÃ³rio remoto quanto local.
 
 ---
 
-## 2. Dependências Necessárias
+## 2. DependÃªncias NecessÃ¡rias
 
-No seu projeto Maven, inclua as seguintes dependências no arquivo **pom.xml**. Essas dependências garantem que o Spring Boot, Spring Security e JJWT (versão 0.11.5) estejam disponíveis, além do suporte à validação e à persistência de dados via JPA.
+No seu projeto Maven, inclua as seguintes dependÃªncias no arquivo **pom.xml**. Essas dependÃªncias garantem que o Spring Boot, Spring Security e JJWT (versÃ£o 0.11.5) estejam disponÃ­veis, alÃ©m do suporte Ã  validaÃ§Ã£o e Ã  persistÃªncia de dados via JPA.
 
 ```xml
 <!-- Spring Boot Starter Security -->
@@ -28,7 +59,7 @@ No seu projeto Maven, inclua as seguintes dependências no arquivo **pom.xml**. 
     <artifactId>spring-boot-starter-security</artifactId>
 </dependency>
 
-<!-- JJWT versão 0.11.5 (dividido em três módulos) -->
+<!-- JJWT versÃ£o 0.11.5 (dividido em trÃªs mÃ³dulos) -->
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
     <artifactId>jjwt-api</artifactId>
@@ -49,15 +80,15 @@ No seu projeto Maven, inclua as seguintes dependências no arquivo **pom.xml**. 
 ```
 
 > **Dica:**  
-> - **jjwt-api:** Contém as interfaces e classes abstratas.  
-> - **jjwt-impl:** Fornece a implementação concreta.  
-> - **jjwt-jackson:** Realiza a integração com o Jackson para serialização/deserialização.
+> - **jjwt-api:** ContÃ©m as interfaces e classes abstratas.  
+> - **jjwt-impl:** Fornece a implementaÃ§Ã£o concreta.  
+> - **jjwt-jackson:** Realiza a integraÃ§Ã£o com o Jackson para serializaÃ§Ã£o/deserializaÃ§Ã£o.
 
 ---
 
-## 3. Entidade Usuário Persistida com JPA
+## 3. Entidade UsuÃ¡rio Persistida com JPA
 
-Crie uma entidade que represente o usuário e implemente a interface `UserDetails` do Spring Security. Neste exemplo, as roles são armazenadas como uma lista de _strings_ em uma tabela separada, utilizando o recurso `@ElementCollection`.
+Crie uma entidade que represente o usuÃ¡rio e implemente a interface `UserDetails` do Spring Security. Neste exemplo, as roles sÃ£o armazenadas como uma lista de _strings_ em uma tabela separada, utilizando o recurso `@ElementCollection`.
 
 ```java
 package com.example.demo.model;
@@ -145,9 +176,9 @@ public class Usuario implements UserDetails {
 }
 ```
 
-### 3.1. Atualize o Script SQL para Inserir um Usuário
+### 3.1. Atualize o Script SQL para Inserir um UsuÃ¡rio
 
-No arquivo `data.sql`, adicione os comandos para inserir um usuário e suas roles:
+No arquivo `data.sql`, adicione os comandos para inserir um usuÃ¡rio e suas roles:
 
 ```sql
 INSERT INTO usuarios (username, password) VALUES ('admin@uea.edu.br', '$2a$10$Ebmi/uPZlhTEB7e39gsPTOfADOsL0IdEcEQllZyogM/WI/WKUMYdW');
@@ -158,9 +189,9 @@ INSERT INTO usuario_roles (usuario_id, role) VALUES (1, 'ROLE_ADMIN');
 
 ---
 
-## 4. Repositório para Usuários
+## 4. RepositÃ³rio para UsuÃ¡rios
 
-Crie uma interface de repositório para acessar os dados dos usuários. Essa interface estende o `JpaRepository` do Spring Data JPA:
+Crie uma interface de repositÃ³rio para acessar os dados dos usuÃ¡rios. Essa interface estende o `JpaRepository` do Spring Data JPA:
 
 ```java
 package com.example.demo.repository;
@@ -178,7 +209,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
 ## 5. DTOs
 
-Crie os DTOs para as requisições e respostas da autenticação.
+Crie os DTOs para as requisiÃ§Ãµes e respostas da autenticaÃ§Ã£o.
 
 ### 5.1 LoginRequestDTO
 
@@ -196,16 +227,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LoginRequestDTO {
-    @NotNull(message = "O email é obrigatório.")
+    @NotNull(message = "O email Ã© obrigatÃ³rio.")
     String username;
-    @NotNull(message = "A senha é obrigatória.")
+    @NotNull(message = "A senha Ã© obrigatÃ³ria.")
     String password;
 }
 ```
 
 ### 5.2 LoginResponseDTO
 
-Crie o DTO de resposta que conterá o token JWT e o tempo de expiração:
+Crie o DTO de resposta que conterÃ¡ o token JWT e o tempo de expiraÃ§Ã£o:
 
 ```java
 package com.example.demo.dto;
@@ -225,7 +256,7 @@ public class LoginResponseDTO {
 
 ---
 
-## 6. Profiles e Propriedades de Configuração
+## 6. Profiles e Propriedades de ConfiguraÃ§Ã£o
 
 No arquivo **application.properties**, configure o perfil a ser utilizado e as propriedades relacionadas ao JWT:
 
@@ -233,17 +264,17 @@ No arquivo **application.properties**, configure o perfil a ser utilizado e as p
 spring.profiles.active=jwt
 
 security.jwt.secret-key=3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b
-# Tempo de expiração: 1 hora (3600000 milissegundos)
+# Tempo de expiraÃ§Ã£o: 1 hora (3600000 milissegundos)
 security.jwt.expiration-time=3600000
 ```
 
 ---
 
-## 7. Serviços para Autenticação
+## 7. ServiÃ§os para AutenticaÃ§Ã£o
 
 ### 7.1 JwtService
 
-Este serviço é responsável por gerar e validar os tokens JWT. Note que, na versão 0.11.5, a API utiliza `Jwts.builder()` e `Jwts.parserBuilder()`.
+Este serviÃ§o Ã© responsÃ¡vel por gerar e validar os tokens JWT. Note que, na versÃ£o 0.11.5, a API utiliza `Jwts.builder()` e `Jwts.parserBuilder()`.
 
 ```java
 package com.example.demo.service;
@@ -340,7 +371,7 @@ public class JwtService {
 
 ### 7.2 AuthenticationService
 
-Realiza a autenticação do usuário utilizando o `AuthenticationManager` do Spring Security. Caso a autenticação seja bem-sucedida, o serviço retorna o usuário autenticado; caso contrário, lança uma exceção personalizada.
+Realiza a autenticaÃ§Ã£o do usuÃ¡rio utilizando o `AuthenticationManager` do Spring Security. Caso a autenticaÃ§Ã£o seja bem-sucedida, o serviÃ§o retorna o usuÃ¡rio autenticado; caso contrÃ¡rio, lanÃ§a uma exceÃ§Ã£o personalizada.
 
 ```java
 package com.example.demo.service;
@@ -377,14 +408,14 @@ public class AuthenticationService {
         );
 
         return userRepository.findByUsername(loginRequestDTO.username())
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
+                .orElseThrow(() -> new UsernameNotFoundException("UsuÃ¡rio nÃ£o encontrado"));
     }
 }
 ```
 
 ---
 
-## 8. Configuração de Segurança
+## 8. ConfiguraÃ§Ã£o de SeguranÃ§a
 
 ### 8.1 ApplicationConfiguration
 
@@ -419,7 +450,7 @@ public class ApplicationConfiguration {
     @Bean
     UserDetailsService userDetailsService() {
         return username -> userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
+                .orElseThrow(() -> new UsernameNotFoundException("UsuÃ¡rio nÃ£o encontrado"));
     }
 
     @Bean
@@ -444,7 +475,7 @@ public class ApplicationConfiguration {
 
 ### 8.2 JwtAuthenticationFilter
 
-O filtro intercepta as requisições, extrai o token JWT do header (Bearer) e, se válido, configura a autenticação no contexto do Spring Security.
+O filtro intercepta as requisiÃ§Ãµes, extrai o token JWT do header (Bearer) e, se vÃ¡lido, configura a autenticaÃ§Ã£o no contexto do Spring Security.
 
 ```java
 package com.example.demo.security;
@@ -523,7 +554,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 ### 8.3 JwtSecurityConfig
 
-Configura o Spring Security para utilizar o filtro JWT, definir endpoints públicos e habilitar as autorizações via anotações. Também configura o CORS para permitir o acesso do frontend.
+Configura o Spring Security para utilizar o filtro JWT, definir endpoints pÃºblicos e habilitar as autorizaÃ§Ãµes via anotaÃ§Ãµes. TambÃ©m configura o CORS para permitir o acesso do frontend.
 
 ```java
 package com.example.demo.config;
@@ -598,9 +629,9 @@ public class JwtSecurityConfig {
 
 ---
 
-## 9. Controlador para Autenticação
+## 9. Controlador para AutenticaÃ§Ã£o
 
-Crie o endpoint REST que receberá as requisições de login e retornará o token JWT.
+Crie o endpoint REST que receberÃ¡ as requisiÃ§Ãµes de login e retornarÃ¡ o token JWT.
 
 ```java
 package com.example.demo.controller;
@@ -642,9 +673,9 @@ public class AuthenticationController {
 
 ---
 
-## 10. Configuração de Autorização nos Controllers
+## 10. ConfiguraÃ§Ã£o de AutorizaÃ§Ã£o nos Controllers
 
-Implemente as autorizações usando a anotação `@PreAuthorize` nos endpoints que exigem segurança. Veja os exemplos a seguir:
+Implemente as autorizaÃ§Ãµes usando a anotaÃ§Ã£o `@PreAuthorize` nos endpoints que exigem seguranÃ§a. Veja os exemplos a seguir:
 
 ### 10.1 Exemplo em PessoaController
 
@@ -804,12 +835,12 @@ Implemente as autorizações usando a anotação `@PreAuthorize` nos endpoints q
 
 ---
 
-## 11. Testando os Endpoints com Autenticação
+## 11. Testando os Endpoints com AutenticaÃ§Ã£o
 
-Após configurar a API, siga este passo a passo para testar os endpoints com autenticação:
+ApÃ³s configurar a API, siga este passo a passo para testar os endpoints com autenticaÃ§Ã£o:
 
 1. **Testar o Endpoint de Login:**
-   - Utilize uma ferramenta de testes de API (como Postman ou cURL) para enviar uma requisição **POST** para o endpoint `/api/auth/login`.
+   - Utilize uma ferramenta de testes de API (como Postman ou cURL) para enviar uma requisiÃ§Ã£o **POST** para o endpoint `/api/auth/login`.
    - Certifique-se de que o header `Content-Type` esteja definido como `application/json`.
    - Envie o seguinte payload (exemplo):
      ```json
@@ -826,7 +857,7 @@ Após configurar a API, siga este passo a passo para testar os endpoints com aut
      ```
 
 2. **Verificar a Resposta do Login:**
-   - Se a autenticação for bem-sucedida, a resposta será um JSON contendo o token JWT e o tempo de expiração:
+   - Se a autenticaÃ§Ã£o for bem-sucedida, a resposta serÃ¡ um JSON contendo o token JWT e o tempo de expiraÃ§Ã£o:
      ```json
      {
        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -836,7 +867,7 @@ Após configurar a API, siga este passo a passo para testar os endpoints com aut
    - Copie o token JWT retornado.
 
 3. **Testar Endpoints Protegidos:**
-   - Para acessar um endpoint que requer autenticação (por exemplo, um GET em `/api/pessoas`), adicione o token JWT no cabeçalho da requisição.
+   - Para acessar um endpoint que requer autenticaÃ§Ã£o (por exemplo, um GET em `/api/pessoas`), adicione o token JWT no cabeÃ§alho da requisiÃ§Ã£o.
    - O header deve ser: `Authorization: Bearer <TOKEN_JWT>`.
    - Exemplo com cURL:
      ```bash
@@ -845,38 +876,38 @@ Após configurar a API, siga este passo a passo para testar os endpoints com aut
      ```
 
 4. **Verificar a Resposta dos Endpoints Protegidos:**
-   - Se o token for válido e o usuário possuir as permissões necessárias, a resposta do endpoint protegido será exibida.
-   - Caso o token esteja ausente, inválido ou expirado, a API retornará um status 403 ou 401, conforme a configuração.
+   - Se o token for vÃ¡lido e o usuÃ¡rio possuir as permissÃµes necessÃ¡rias, a resposta do endpoint protegido serÃ¡ exibida.
+   - Caso o token esteja ausente, invÃ¡lido ou expirado, a API retornarÃ¡ um status 403 ou 401, conforme a configuraÃ§Ã£o.
 
-5. **Testar com Ferramentas Gráficas:**
-   - No Postman, configure a variável do token em um ambiente e utilize-a nos headers das requisições para facilitar o teste dos endpoints protegidos.
-   - Verifique os logs e respostas para confirmar que a autenticação está funcionando conforme esperado.
+5. **Testar com Ferramentas GrÃ¡ficas:**
+   - No Postman, configure a variÃ¡vel do token em um ambiente e utilize-a nos headers das requisiÃ§Ãµes para facilitar o teste dos endpoints protegidos.
+   - Verifique os logs e respostas para confirmar que a autenticaÃ§Ã£o estÃ¡ funcionando conforme esperado.
 
 6. **Testar Logout (se implementado):**
-   - Caso haja um endpoint para logout ou invalidação de token, repita os passos acima para testar essa funcionalidade.
+   - Caso haja um endpoint para logout ou invalidaÃ§Ã£o de token, repita os passos acima para testar essa funcionalidade.
 
 ---
 
 ## 12. Commit, Push e Pull Request
 
-Após testar e confirmar que a API está funcionando corretamente, siga os passos abaixo:
+ApÃ³s testar e confirmar que a API estÃ¡ funcionando corretamente, siga os passos abaixo:
 
-1. Faça o commit das alterações:
+1. FaÃ§a o commit das alteraÃ§Ãµes:
    ```bash
    git add .
    git commit -m "11-11-implementar-autenticacao-e-seguranca-com-jwt"
    ```
-2. Envie as alterações para o repositório remoto:
+2. Envie as alteraÃ§Ãµes para o repositÃ³rio remoto:
    ```bash
    git push
    ```
-3. Abra um Pull Request (PR) seguindo as diretrizes do projeto para revisão e integração.
+3. Abra um Pull Request (PR) seguindo as diretrizes do projeto para revisÃ£o e integraÃ§Ã£o.
 
 ---
 
 ## 13. Sincronizando a Branch Main no Ambiente Local
 
-Após a integração, atualize sua branch main:
+ApÃ³s a integraÃ§Ã£o, atualize sua branch main:
 
 ```bash
 git checkout main
@@ -885,9 +916,8 @@ git pull
 
 ---
 
-## 14. Fechamento da Milestone e Lançamento da Release
+## 14. Fechamento da Milestone e LanÃ§amento da Release
 
-Finalize a milestone relacionada e realize o lançamento da release **v4.0.0** conforme o fluxo do projeto.
-
+Finalize a milestone relacionada e realize o lanÃ§amento da release **v4.0.0** conforme o fluxo do projeto.
 
 
