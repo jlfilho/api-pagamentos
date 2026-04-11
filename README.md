@@ -72,6 +72,28 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
 ---
 
+## Execucao Local (Erro security.jwt.secret-key)
+
+Use uma destas opcoes:
+
+### 1) Definir via variavel de ambiente (rapido no PowerShell)
+
+```powershell
+$env:SECURITY_JWT_SECRET_KEY="3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b"
+$env:SECURITY_JWT_EXPIRATION_TIME="360000000"
+.\mvnw.cmd spring-boot:run
+```
+
+### 2) Garantir no application.properties (ou application-dev.properties)
+
+```properties
+security.jwt.secret-key=${SECURITY_JWT_SECRET_KEY:3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b}
+security.jwt.expiration-time=${SECURITY_JWT_EXPIRATION_TIME:360000000}
+```
+
+Se quiser, te passo tambem uma versao com `.env` + comando unico para subir sempre sem precisar exportar variavel manualmente.
+
+---
 ## 1. Criação da Branch no Git
 
 ## Execucao via CLI
