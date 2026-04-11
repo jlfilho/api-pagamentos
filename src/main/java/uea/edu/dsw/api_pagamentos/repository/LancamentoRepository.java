@@ -118,4 +118,17 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
        List<MesTotalProjection> somarReceitasPagasPorMes(
                      @Param("dataInicio") LocalDate dataInicio,
                      @Param("dataFim") LocalDate dataFim);
+
+       @Query("""
+                     SELECT YEAR(l.dataPagamento) AS ano, MONTH(l.dataPagamento) AS mes, SUM(l.valor) AS total
+                     FROM Lancamento l
+                     WHERE l.tipo = uea.edu.dsw.api_pagamentos.model.TipoLancamento.DESPESA
+                       AND l.dataPagamento IS NOT NULL
+                       AND l.dataPagamento BETWEEN :dataInicio AND :dataFim
+                     GROUP BY YEAR(l.dataPagamento), MONTH(l.dataPagamento)
+                     ORDER BY YEAR(l.dataPagamento), MONTH(l.dataPagamento)
+                     """)
+       List<MesTotalProjection> somarDespesasPagasPorMes(
+                     @Param("dataInicio") LocalDate dataInicio,
+                     @Param("dataFim") LocalDate dataFim);
 }
