@@ -19,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import jakarta.validation.Valid;
 import uea.edu.dsw.api_pagamentos.dto.PessoaDTO;
+import uea.edu.dsw.api_pagamentos.dto.PessoaStatusDTO;
 import uea.edu.dsw.api_pagamentos.service.PessoaService;
 
 @RestController
@@ -72,8 +73,8 @@ public class PessoaController {
 
     @PatchMapping("/{codigo}/ativo")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PessoaDTO> atualizarStatus(@PathVariable Long codigo, @RequestBody Boolean ativo) {
-        PessoaDTO atualizada = pessoaService.atualizarStatus(codigo, ativo);
+    public ResponseEntity<PessoaDTO> atualizarStatus(@PathVariable Long codigo, @Valid @RequestBody PessoaStatusDTO status) {
+        PessoaDTO atualizada = pessoaService.atualizarStatus(codigo, status.getAtivo());
         return ResponseEntity.ok(atualizada);
     }
 
