@@ -1,5 +1,9 @@
 package uea.edu.dsw.api_pagamentos.security;
 
+import java.util.Arrays;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -20,12 +24,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class JwtSecurityConfig {
         private final AuthenticationProvider authenticationProvider;
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final String corsAllowedOrigins;
 
         public JwtSecurityConfig(
                         JwtAuthenticationFilter jwtAuthenticationFilter,
-                        AuthenticationProvider authenticationProvider) {
+                        AuthenticationProvider authenticationProvider,
+                        @Value("${app.security.cors.allowed-origins:http://localhost:4200}") String corsAllowedOrigins) {
                 this.jwtAuthenticationFilter = jwtAuthenticationFilter;
                 this.authenticationProvider = authenticationProvider;
+                this.corsAllowedOrigins = corsAllowedOrigins;
         }
 
         @Bean
@@ -53,7 +60,11 @@ public class JwtSecurityConfig {
         @Bean
         public UrlBasedCorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.addAllowedOrigin("http://localhost:4200"); // URL do frontend
+                List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+                                .map(String::trim)
+                                .filter(origin -> !origin.isEmpty())
+                                .toList();
+                configuration.setAllowedOrigins(allowedOrigins);
                 configuration.addAllowedMethod("*");
                 configuration.addAllowedHeader("*");
                 configuration.setAllowCredentials(true);
