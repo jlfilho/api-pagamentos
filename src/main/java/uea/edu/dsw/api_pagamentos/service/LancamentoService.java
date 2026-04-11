@@ -11,7 +11,9 @@ import uea.edu.dsw.api_pagamentos.dto.ResumoLancamentoDTO;
 import uea.edu.dsw.api_pagamentos.model.Categoria;
 import uea.edu.dsw.api_pagamentos.model.Lancamento;
 import uea.edu.dsw.api_pagamentos.model.Pessoa;
+import uea.edu.dsw.api_pagamentos.repository.CategoriaRepository;
 import uea.edu.dsw.api_pagamentos.repository.LancamentoRepository;
+import uea.edu.dsw.api_pagamentos.repository.PessoaRepository;
 import uea.edu.dsw.api_pagamentos.service.exception.RecursoEmUsoException;
 import uea.edu.dsw.api_pagamentos.service.exception.RecursoNaoEncontradoException;
 
@@ -22,12 +24,19 @@ import java.util.stream.Collectors;
 public class LancamentoService {
 
     private final LancamentoRepository lancamentoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final PessoaRepository pessoaRepository;
 
-    public LancamentoService(LancamentoRepository lancamentoRepository) {
+    public LancamentoService(
+            LancamentoRepository lancamentoRepository,
+            CategoriaRepository categoriaRepository,
+            PessoaRepository pessoaRepository) {
         this.lancamentoRepository = lancamentoRepository;
+        this.categoriaRepository = categoriaRepository;
+        this.pessoaRepository = pessoaRepository;
     }
 
-    // Método para converter Lancamento em LancamentoDTO
+    // Metodo para converter Lancamento em LancamentoDTO
     private LancamentoDTO toDTO(Lancamento lancamento) {
         LancamentoDTO dto = new LancamentoDTO();
         dto.setCodigo(lancamento.getCodigo());
@@ -55,7 +64,7 @@ public class LancamentoService {
         return dto;
     }
 
-    // Método para converter LancamentoDTO em Lancamento
+    // Metodo para converter LancamentoDTO em Lancamento
     private Lancamento toEntity(LancamentoDTO dto) {
         Lancamento lancamento = new Lancamento();
         lancamento.setCodigo(dto.getCodigo());
@@ -93,13 +102,16 @@ public class LancamentoService {
     @Transactional
     public LancamentoDTO criarLancamento(LancamentoDTO lancamentoDTO) {
         Lancamento lancamento = toEntity(lancamentoDTO);
+        lancamento.setCategoria(buscarCategoriaValida(lancamentoDTO));
+        lancamento.setPessoa(buscarPessoaValida(lancamentoDTO));
+
         Lancamento savedLancamento = lancamentoRepository.save(lancamento);
         return toDTO(savedLancamento);
     }
 
     public LancamentoDTO buscarLancamentoPorCodigo(Long codigo) {
         Lancamento lancamento = lancamentoRepository.findById(codigo)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Lançamento não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Lancamento nao encontrado"));
         return toDTO(lancamento);
     }
 
@@ -112,7 +124,7 @@ public class LancamentoService {
     @Transactional
     public LancamentoDTO atualizarLancamento(Long codigo, LancamentoDTO lancamentoDTO) {
         Lancamento lancamentoExistente = lancamentoRepository.findById(codigo)
-                .orElseThrow(() -> new RecursoNaoEncontradoException("Lançamento não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Lancamento nao encontrado"));
 
         lancamentoExistente.setDescricao(lancamentoDTO.getDescricao());
         lancamentoExistente.setValor(lancamentoDTO.getValor());
@@ -120,33 +132,48 @@ public class LancamentoService {
         lancamentoExistente.setDataPagamento(lancamentoDTO.getDataPagamento());
         lancamentoExistente.setObservacao(lancamentoDTO.getObservacao());
         lancamentoExistente.setTipo(lancamentoDTO.getTipo());
+        lancamentoExistente.setCategoria(buscarCategoriaValida(lancamentoDTO));
+        lancamentoExistente.setPessoa(buscarPessoaValida(lancamentoDTO));
 
-        if (lancamentoDTO.getCategoria() != null) {
-            Categoria categoria = new Categoria();
-            categoria.setCodigo(lancamentoDTO.getCategoria().getCodigo());
-            categoria.setNome(lancamentoDTO.getCategoria().getNome());
-            lancamentoExistente.setCategoria(categoria);
-        }
-        if (lancamentoDTO.getPessoa() != null) {
-            Pessoa pessoa = new Pessoa();
-            pessoa.setCodigo(lancamentoDTO.getPessoa().getCodigo());
-            pessoa.setNome(lancamentoDTO.getPessoa().getNome());
-            lancamentoExistente.setPessoa(pessoa);
-        }
-
-        Lancamento LancamentoAtualizado = lancamentoRepository.save(lancamentoExistente);
-        return toDTO(LancamentoAtualizado);
+        Lancamento lancamentoAtualizado = lancamentoRepository.save(lancamentoExistente);
+        return toDTO(lancamentoAtualizado);
     }
 
     @Transactional
     public void deletarLancamento(Long codigo) {
         if (!lancamentoRepository.existsById(codigo)) {
-            throw new RecursoNaoEncontradoException("Lançamento não encontrado");
+            throw new RecursoNaoEncontradoException("Lancamento nao encontrado");
         }
         try {
             lancamentoRepository.deleteById(codigo);
         } catch (Exception e) {
-            throw new RecursoEmUsoException("Lançamento em uso e não pode ser removido");
+            throw new RecursoEmUsoException("Lancamento em uso e nao pode ser removido");
         }
+    }
+
+    private Categoria buscarCategoriaValida(LancamentoDTO lancamentoDTO) {
+        if (lancamentoDTO.getCategoria() == null || lancamentoDTO.getCategoria().getCodigo() == null) {
+            throw new IllegalArgumentException("Categoria informada e invalida.");
+        }
+
+        Long categoriaCodigo = lancamentoDTO.getCategoria().getCodigo();
+        return categoriaRepository.findById(categoriaCodigo)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria nao encontrada"));
+    }
+
+    private Pessoa buscarPessoaValida(LancamentoDTO lancamentoDTO) {
+        if (lancamentoDTO.getPessoa() == null || lancamentoDTO.getPessoa().getCodigo() == null) {
+            throw new IllegalArgumentException("Pessoa informada e invalida.");
+        }
+
+        Long pessoaCodigo = lancamentoDTO.getPessoa().getCodigo();
+        Pessoa pessoa = pessoaRepository.findById(pessoaCodigo)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa nao encontrada"));
+
+        if (!Boolean.TRUE.equals(pessoa.getAtivo())) {
+            throw new IllegalArgumentException("Pessoa inativa nao pode receber lancamento.");
+        }
+
+        return pessoa;
     }
 }
