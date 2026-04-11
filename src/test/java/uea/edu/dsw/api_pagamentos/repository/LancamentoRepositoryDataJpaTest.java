@@ -121,6 +121,60 @@ class LancamentoRepositoryDataJpaTest {
         assertEquals(BigDecimal.ZERO, total);
     }
 
+    @Test
+    void deveSomarDespesasPorCategoriaNoPeriodo() {
+        criarLancamento("Aluguel Maio", LocalDate.of(2024, 5, 10), new BigDecimal("1200.00"), TipoLancamento.DESPESA,
+                "Moradia");
+        criarLancamento("Condominio Maio", LocalDate.of(2024, 5, 20), new BigDecimal("300.00"), TipoLancamento.DESPESA,
+                "Moradia");
+        criarLancamento("Mercado Maio", LocalDate.of(2024, 5, 22), new BigDecimal("500.00"), TipoLancamento.DESPESA,
+                "Alimentacao");
+        criarLancamento("Receita Maio", LocalDate.of(2024, 5, 7), new BigDecimal("2500.00"), TipoLancamento.RECEITA,
+                "Salario");
+        criarLancamento("Despesa Fora Periodo", LocalDate.of(2024, 6, 1), new BigDecimal("700.00"),
+                TipoLancamento.DESPESA, "Moradia");
+
+        List<CategoriaTotalProjection> categorias = lancamentoRepository.somarDespesasPorCategoria(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31));
+
+        assertEquals(2, categorias.size());
+        assertEquals("Moradia", categorias.get(0).getCategoria());
+        assertEquals(new BigDecimal("1500.00"), categorias.get(0).getTotal());
+        assertEquals("Alimentacao", categorias.get(1).getCategoria());
+        assertEquals(new BigDecimal("500.00"), categorias.get(1).getTotal());
+    }
+
+    @Test
+    void deveSomarTotalGeralDeDespesasNoPeriodo() {
+        criarLancamento("Aluguel Maio", LocalDate.of(2024, 5, 10), new BigDecimal("1200.00"), TipoLancamento.DESPESA,
+                "Moradia");
+        criarLancamento("Mercado Maio", LocalDate.of(2024, 5, 22), new BigDecimal("500.00"), TipoLancamento.DESPESA,
+                "Alimentacao");
+        criarLancamento("Receita Maio", LocalDate.of(2024, 5, 7), new BigDecimal("2500.00"), TipoLancamento.RECEITA,
+                "Salario");
+        criarLancamento("Despesa Fora Periodo", LocalDate.of(2024, 6, 1), new BigDecimal("700.00"),
+                TipoLancamento.DESPESA, "Moradia");
+
+        BigDecimal total = lancamentoRepository.somarTotalDespesas(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31));
+
+        assertEquals(new BigDecimal("1700.00"), total);
+    }
+
+    @Test
+    void deveRetornarZeroQuandoNaoHouverDespesasNoPeriodo() {
+        criarLancamento("Receita Maio", LocalDate.of(2024, 5, 7), new BigDecimal("2500.00"), TipoLancamento.RECEITA,
+                "Salario");
+
+        BigDecimal total = lancamentoRepository.somarTotalDespesas(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31));
+
+        assertEquals(BigDecimal.ZERO, total);
+    }
+
     private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor) {
         criarLancamento(descricao, dataVencimento, valor, TipoLancamento.RECEITA, "Cat " + descricao.substring(0, 3));
     }
