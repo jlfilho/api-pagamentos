@@ -51,4 +51,26 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
        BigDecimal somarTotalReceitas(
                      @Param("dataInicio") LocalDate dataInicio,
                      @Param("dataFim") LocalDate dataFim);
+
+       @Query("""
+                     SELECT l.categoria.nome AS categoria, SUM(l.valor) AS total
+                     FROM Lancamento l
+                     WHERE l.tipo = uea.edu.dsw.api_pagamentos.model.TipoLancamento.DESPESA
+                       AND l.dataVencimento BETWEEN :dataInicio AND :dataFim
+                     GROUP BY l.categoria.nome
+                     ORDER BY SUM(l.valor) DESC
+                     """)
+       List<CategoriaTotalProjection> somarDespesasPorCategoria(
+                     @Param("dataInicio") LocalDate dataInicio,
+                     @Param("dataFim") LocalDate dataFim);
+
+       @Query("""
+                     SELECT COALESCE(SUM(l.valor), 0)
+                     FROM Lancamento l
+                     WHERE l.tipo = uea.edu.dsw.api_pagamentos.model.TipoLancamento.DESPESA
+                       AND l.dataVencimento BETWEEN :dataInicio AND :dataFim
+                     """)
+       BigDecimal somarTotalDespesas(
+                     @Param("dataInicio") LocalDate dataInicio,
+                     @Param("dataFim") LocalDate dataFim);
 }
