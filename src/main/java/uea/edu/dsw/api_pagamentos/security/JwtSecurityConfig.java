@@ -1,4 +1,4 @@
-﻿package uea.edu.dsw.api_pagamentos.security;
+package uea.edu.dsw.api_pagamentos.security;
 
 import java.util.Arrays;
 import java.util.List;
