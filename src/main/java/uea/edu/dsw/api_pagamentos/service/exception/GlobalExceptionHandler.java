@@ -10,10 +10,14 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,13 +47,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex,
             HttpServletRequest request) {
-        Map<String, String> details = new LinkedHashMap<>();
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            details.put(fieldError.getField(), fieldError.getDefaultMessage());
-        }
-
         return buildError(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Erro de validacao nos campos informados.",
-                request, details);
+                request, mapValidationDetails(ex.getBindingResult()));
+    }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBindException(BindException ex, HttpServletRequest request) {
+        return buildError(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Erro de validacao nos parametros.",
+                request, mapValidationDetails(ex.getBindingResult()));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -76,6 +81,16 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_BODY",
                 "Corpo da requisicao invalido ou mal formatado.", request, null);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put(ex.getName(), "Valor invalido para o parametro informado.");
+        return buildError(HttpStatus.BAD_REQUEST, "INVALID_PARAMETER",
+                "Parametro invalido na requisicao.", request, details);
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -114,5 +129,16 @@ public class GlobalExceptionHandler {
                 details);
 
         return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    private Map<String, String> mapValidationDetails(BindingResult bindingResult) {
+        Map<String, String> details = new LinkedHashMap<>();
+        for (FieldError fieldError : bindingResult.getFieldErrors()) {
+            details.put(fieldError.getField(), fieldError.getDefaultMessage());
+        }
+        for (ObjectError objectError : bindingResult.getGlobalErrors()) {
+            details.put(objectError.getObjectName(), objectError.getDefaultMessage());
+        }
+        return details;
     }
 }

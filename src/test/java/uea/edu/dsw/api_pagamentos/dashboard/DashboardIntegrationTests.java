@@ -53,6 +53,44 @@ class DashboardIntegrationTests {
                 .andExpect(jsonPath("$.despesasPagasMensal").isArray());
     }
 
+    @Test
+    void deveRetornar400QuandoDashboardSemDataInicio() throws Exception {
+        String token = obterToken();
+
+        mockMvc.perform(get("/dashboard")
+                        .param("dataFim", "2026-01-31")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void deveRetornar400QuandoDashboardComIntervaloInvalido() throws Exception {
+        String token = obterToken();
+
+        mockMvc.perform(get("/dashboard")
+                        .param("dataInicio", "2026-02-10")
+                        .param("dataFim", "2026-01-31")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void deveRetornar400QuandoDashboardComFormatoDataInvalido() throws Exception {
+        String token = obterToken();
+
+        mockMvc.perform(get("/dashboard")
+                        .param("dataInicio", "31-01-2026")
+                        .param("dataFim", "2026-01-31")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
     private String obterToken() throws Exception {
         String payload = """
                 {
