@@ -1,4 +1,4 @@
-package uea.edu.dsw.api_pagamentos.security;
+﻿package uea.edu.dsw.api_pagamentos.security;
 
 import java.util.Arrays;
 import java.util.List;
@@ -25,32 +25,46 @@ public class JwtSecurityConfig {
         private final AuthenticationProvider authenticationProvider;
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
         private final String corsAllowedOrigins;
+        private final boolean docsPublicEnabled;
+        private final boolean h2ConsoleEnabled;
 
         public JwtSecurityConfig(
                         JwtAuthenticationFilter jwtAuthenticationFilter,
                         AuthenticationProvider authenticationProvider,
-                        @Value("${app.security.cors.allowed-origins:http://localhost:4200}") String corsAllowedOrigins) {
+                        @Value("${app.security.cors.allowed-origins:http://localhost:4200}") String corsAllowedOrigins,
+                        @Value("${app.security.docs-public-enabled:false}") boolean docsPublicEnabled,
+                        @Value("${app.security.h2-console-enabled:false}") boolean h2ConsoleEnabled) {
                 this.jwtAuthenticationFilter = jwtAuthenticationFilter;
                 this.authenticationProvider = authenticationProvider;
                 this.corsAllowedOrigins = corsAllowedOrigins;
+                this.docsPublicEnabled = docsPublicEnabled;
+                this.h2ConsoleEnabled = h2ConsoleEnabled;
         }
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-                http
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                                .csrf(csrf -> csrf.disable())
-                                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
-                                .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**","/swagger-ui.html/**",
-                                                                "/v3/api-docs.yaml", "/swagger-resources/**")
-                                                .permitAll()
-                                                .requestMatchers("/api/auth/login/**", "/logout**")
-                                                .permitAll()
-                                                .requestMatchers("/h2-console/**").permitAll()
-                                                .anyRequest().authenticated())
-                                .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(csrf -> csrf.disable());
+
+                if (h2ConsoleEnabled) {
+                        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+                }
+
+                http.authorizeHttpRequests(auth -> {
+                        if (docsPublicEnabled) {
+                                auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html/**",
+                                                "/v3/api-docs.yaml", "/swagger-resources/**")
+                                                .permitAll();
+                        }
+
+                        if (h2ConsoleEnabled) {
+                                auth.requestMatchers("/h2-console/**").permitAll();
+                        }
+
+                        auth.requestMatchers("/api/auth/login").permitAll()
+                                        .anyRequest().authenticated();
+                }).sessionManagement(session -> session
+                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .authenticationProvider(authenticationProvider)
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
