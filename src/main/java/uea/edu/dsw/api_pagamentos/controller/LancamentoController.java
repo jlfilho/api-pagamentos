@@ -64,8 +64,8 @@ public class LancamentoController {
     // PUT /lancamentos/{codigo}
     @PutMapping("/{codigo}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
-    public ResponseEntity<LancamentoDTO> atualizarLancamento(@Valid @PathVariable Long codigo,
-            @RequestBody LancamentoDTO lancamentoDTO) {
+    public ResponseEntity<LancamentoDTO> atualizarLancamento(@PathVariable Long codigo,
+            @Valid @RequestBody LancamentoDTO lancamentoDTO) {
         LancamentoDTO lancamentoAtualizado = lancamentoService.atualizarLancamento(codigo, lancamentoDTO);
         return ResponseEntity.ok(lancamentoAtualizado);
     }
