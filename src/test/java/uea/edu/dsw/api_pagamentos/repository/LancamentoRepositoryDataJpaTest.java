@@ -19,6 +19,7 @@ import uea.edu.dsw.api_pagamentos.model.Lancamento;
 import uea.edu.dsw.api_pagamentos.model.Pessoa;
 import uea.edu.dsw.api_pagamentos.model.TipoLancamento;
 import uea.edu.dsw.api_pagamentos.repository.LancamentoRepository.CategoriaTotalProjection;
+import uea.edu.dsw.api_pagamentos.repository.LancamentoRepository.MesTotalProjection;
 
 @DataJpaTest(properties = {
         "spring.sql.init.mode=never"
@@ -221,8 +222,81 @@ class LancamentoRepositoryDataJpaTest {
         assertEquals(new BigDecimal("600"), top10.get(9).getValor());
     }
 
+    @Test
+    void deveSomarReceitasPagasPorMesNoPeriodo() {
+        criarLancamento("Receita Jan 1", LocalDate.of(2024, 1, 5), LocalDate.of(2024, 1, 5), new BigDecimal("1000.00"),
+                TipoLancamento.RECEITA, "Salario");
+        criarLancamento("Receita Jan 2", LocalDate.of(2024, 1, 20), LocalDate.of(2024, 1, 20), new BigDecimal("500.00"),
+                TipoLancamento.RECEITA, "Freela");
+        criarLancamento("Receita Fev", LocalDate.of(2024, 2, 10), LocalDate.of(2024, 2, 11), new BigDecimal("700.00"),
+                TipoLancamento.RECEITA, "Freela");
+        criarLancamento("Receita Nao Paga", LocalDate.of(2024, 2, 18), null, new BigDecimal("900.00"),
+                TipoLancamento.RECEITA, "Salario");
+        criarLancamento("Despesa Paga", LocalDate.of(2024, 2, 5), LocalDate.of(2024, 2, 6), new BigDecimal("300.00"),
+                TipoLancamento.DESPESA, "Moradia");
+        criarLancamento("Receita Fora Periodo", LocalDate.of(2024, 3, 3), LocalDate.of(2024, 3, 3), new BigDecimal("800.00"),
+                TipoLancamento.RECEITA, "Salario");
+
+        List<MesTotalProjection> totais = lancamentoRepository.somarReceitasPagasPorMes(
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 2, 29));
+
+        assertEquals(2, totais.size());
+        assertEquals(2024, totais.get(0).getAno());
+        assertEquals(1, totais.get(0).getMes());
+        assertEquals(new BigDecimal("1500.00"), totais.get(0).getTotal());
+        assertEquals(2024, totais.get(1).getAno());
+        assertEquals(2, totais.get(1).getMes());
+        assertEquals(new BigDecimal("700.00"), totais.get(1).getTotal());
+    }
+
+    @Test
+    void deveRetornarVazioQuandoNaoHouverReceitasPagasNoPeriodo() {
+        criarLancamento("Receita Nao Paga", LocalDate.of(2024, 1, 10), null, new BigDecimal("900.00"),
+                TipoLancamento.RECEITA, "Salario");
+        criarLancamento("Despesa Paga", LocalDate.of(2024, 1, 12), LocalDate.of(2024, 1, 12), new BigDecimal("300.00"),
+                TipoLancamento.DESPESA, "Moradia");
+
+        List<MesTotalProjection> totais = lancamentoRepository.somarReceitasPagasPorMes(
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 31));
+
+        assertEquals(0, totais.size());
+    }
+
     private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor) {
         criarLancamento(descricao, dataVencimento, valor, TipoLancamento.RECEITA, "Cat " + descricao.substring(0, 3));
+    }
+
+    private void criarLancamento(String descricao, LocalDate dataVencimento, LocalDate dataPagamento, BigDecimal valor,
+            TipoLancamento tipo, String nomeCategoria) {
+        Categoria categoria = new Categoria();
+        categoria.setNome(nomeCategoria);
+        categoria = categoriaRepository.save(categoria);
+
+        Pessoa pessoa = new Pessoa();
+        pessoa.setNome("Pessoa " + descricao);
+        pessoa.setAtivo(true);
+        pessoa.setEndereco(new Endereco(
+                "Rua B",
+                "456",
+                null,
+                "Centro",
+                "12345-678",
+                "Manaus",
+                "AM"));
+        pessoa = pessoaRepository.save(pessoa);
+
+        Lancamento lancamento = new Lancamento();
+        lancamento.setDescricao(descricao);
+        lancamento.setValor(valor);
+        lancamento.setDataVencimento(dataVencimento);
+        lancamento.setDataPagamento(dataPagamento);
+        lancamento.setTipo(tipo);
+        lancamento.setCategoria(categoria);
+        lancamento.setPessoa(pessoa);
+
+        lancamentoRepository.save(lancamento);
     }
 
     private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor, TipoLancamento tipo,

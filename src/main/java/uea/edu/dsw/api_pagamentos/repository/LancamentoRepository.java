@@ -21,6 +21,14 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
               BigDecimal getTotal();
        }
 
+       interface MesTotalProjection {
+              Integer getAno();
+
+              Integer getMes();
+
+              BigDecimal getTotal();
+       }
+
        @Query("SELECT l FROM Lancamento l " +
                      "WHERE (:descricao IS NULL OR lower(l.descricao) LIKE lower(concat('%', :descricao, '%'))) " +
                      "AND (:dataVencimentoDe IS NULL OR l.dataVencimento >= :dataVencimentoDe) " +
@@ -97,4 +105,17 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
                      @Param("dataInicio") LocalDate dataInicio,
                      @Param("dataFim") LocalDate dataFim,
                      Pageable pageable);
+
+       @Query("""
+                     SELECT YEAR(l.dataPagamento) AS ano, MONTH(l.dataPagamento) AS mes, SUM(l.valor) AS total
+                     FROM Lancamento l
+                     WHERE l.tipo = uea.edu.dsw.api_pagamentos.model.TipoLancamento.RECEITA
+                       AND l.dataPagamento IS NOT NULL
+                       AND l.dataPagamento BETWEEN :dataInicio AND :dataFim
+                     GROUP BY YEAR(l.dataPagamento), MONTH(l.dataPagamento)
+                     ORDER BY YEAR(l.dataPagamento), MONTH(l.dataPagamento)
+                     """)
+       List<MesTotalProjection> somarReceitasPagasPorMes(
+                     @Param("dataInicio") LocalDate dataInicio,
+                     @Param("dataFim") LocalDate dataFim);
 }
