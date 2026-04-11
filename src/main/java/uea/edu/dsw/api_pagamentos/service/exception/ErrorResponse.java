@@ -1,4 +1,4 @@
-﻿package uea.edu.dsw.api_pagamentos.service.exception;
+package uea.edu.dsw.api_pagamentos.service.exception;
 
 import java.time.Instant;
 import java.util.Map;
