@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import uea.edu.dsw.api_pagamentos.model.Endereco;
 import uea.edu.dsw.api_pagamentos.model.Lancamento;
 import uea.edu.dsw.api_pagamentos.model.Pessoa;
 import uea.edu.dsw.api_pagamentos.model.TipoLancamento;
+import uea.edu.dsw.api_pagamentos.repository.LancamentoRepository.CategoriaTotalProjection;
 
 @DataJpaTest(properties = {
         "spring.sql.init.mode=never"
@@ -65,9 +67,68 @@ class LancamentoRepositoryDataJpaTest {
         assertEquals("Conta de Luz", pagina.getContent().get(0).getDescricao());
     }
 
+    @Test
+    void deveSomarReceitasPorCategoriaNoPeriodo() {
+        criarLancamento("Salario Maio", LocalDate.of(2024, 5, 10), new BigDecimal("3000.00"), TipoLancamento.RECEITA,
+                "Salario");
+        criarLancamento("Freela Maio", LocalDate.of(2024, 5, 20), new BigDecimal("1000.00"), TipoLancamento.RECEITA,
+                "Salario");
+        criarLancamento("Dividendo Maio", LocalDate.of(2024, 5, 22), new BigDecimal("500.00"), TipoLancamento.RECEITA,
+                "Investimentos");
+        criarLancamento("Aluguel", LocalDate.of(2024, 5, 7), new BigDecimal("1200.00"), TipoLancamento.DESPESA,
+                "Moradia");
+        criarLancamento("Receita Fora Periodo", LocalDate.of(2024, 6, 1), new BigDecimal("700.00"),
+                TipoLancamento.RECEITA, "Salario");
+
+        List<CategoriaTotalProjection> categorias = lancamentoRepository.somarReceitasPorCategoria(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31));
+
+        assertEquals(2, categorias.size());
+        assertEquals("Salario", categorias.get(0).getCategoria());
+        assertEquals(new BigDecimal("4000.00"), categorias.get(0).getTotal());
+        assertEquals("Investimentos", categorias.get(1).getCategoria());
+        assertEquals(new BigDecimal("500.00"), categorias.get(1).getTotal());
+    }
+
+    @Test
+    void deveSomarTotalGeralDeReceitasNoPeriodo() {
+        criarLancamento("Salario Maio", LocalDate.of(2024, 5, 10), new BigDecimal("3000.00"), TipoLancamento.RECEITA,
+                "Salario");
+        criarLancamento("Freela Maio", LocalDate.of(2024, 5, 20), new BigDecimal("1000.00"), TipoLancamento.RECEITA,
+                "Salario");
+        criarLancamento("Despesa Maio", LocalDate.of(2024, 5, 7), new BigDecimal("1200.00"), TipoLancamento.DESPESA,
+                "Moradia");
+        criarLancamento("Receita Fora Periodo", LocalDate.of(2024, 6, 1), new BigDecimal("700.00"),
+                TipoLancamento.RECEITA, "Salario");
+
+        BigDecimal total = lancamentoRepository.somarTotalReceitas(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31));
+
+        assertEquals(new BigDecimal("4000.00"), total);
+    }
+
+    @Test
+    void deveRetornarZeroQuandoNaoHouverReceitasNoPeriodo() {
+        criarLancamento("Despesa Maio", LocalDate.of(2024, 5, 7), new BigDecimal("1200.00"), TipoLancamento.DESPESA,
+                "Moradia");
+
+        BigDecimal total = lancamentoRepository.somarTotalReceitas(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31));
+
+        assertEquals(BigDecimal.ZERO, total);
+    }
+
     private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor) {
+        criarLancamento(descricao, dataVencimento, valor, TipoLancamento.RECEITA, "Cat " + descricao.substring(0, 3));
+    }
+
+    private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor, TipoLancamento tipo,
+            String nomeCategoria) {
         Categoria categoria = new Categoria();
-        categoria.setNome("Cat " + descricao.substring(0, 3));
+        categoria.setNome(nomeCategoria);
         categoria = categoriaRepository.save(categoria);
 
         Pessoa pessoa = new Pessoa();
@@ -87,7 +148,7 @@ class LancamentoRepositoryDataJpaTest {
         lancamento.setDescricao(descricao);
         lancamento.setValor(valor);
         lancamento.setDataVencimento(dataVencimento);
-        lancamento.setTipo(TipoLancamento.RECEITA);
+        lancamento.setTipo(tipo);
         lancamento.setCategoria(categoria);
         lancamento.setPessoa(pessoa);
 
