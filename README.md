@@ -123,6 +123,26 @@ Com a API rodando na porta `8080`:
 
 Observacao: no perfil `prod`, a documentacao pode estar desabilitada por configuracao.
 
+## Endpoint Dashboard
+
+Endpoint para montar graficos no frontend:
+
+- `GET /dashboard?dataInicio=YYYY-MM-DD&dataFim=YYYY-MM-DD`
+
+Exemplo:
+
+```bash
+curl -X GET "http://localhost:8080/dashboard?dataInicio=2024-01-01&dataFim=2024-03-31" \
+  -H "Authorization: Bearer <jwt>"
+```
+
+Campos principais retornados:
+
+- `receitas.total` e `receitas.porCategoria[]`
+- `despesas.total` e `despesas.porCategoria[]`
+- `top10Receitas[]` e `top10Despesas[]`
+- `receitasPagasMensal[]` e `despesasPagasMensal[]`
+
 ## Login de Acesso
 
 Endpoint de autenticacao:
