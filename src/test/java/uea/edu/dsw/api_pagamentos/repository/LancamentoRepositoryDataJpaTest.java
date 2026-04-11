@@ -175,6 +175,29 @@ class LancamentoRepositoryDataJpaTest {
         assertEquals(BigDecimal.ZERO, total);
     }
 
+    @Test
+    void deveBuscarTop10DespesasOrdenadasPorValorNoPeriodo() {
+        for (int i = 1; i <= 12; i++) {
+            criarLancamento("Despesa " + i, LocalDate.of(2024, 5, 10), BigDecimal.valueOf(i * 100L),
+                    TipoLancamento.DESPESA, "CatDespesa");
+        }
+        criarLancamento("Receita Mesmo Periodo", LocalDate.of(2024, 5, 10), new BigDecimal("9999.00"),
+                TipoLancamento.RECEITA, "CatReceita");
+        criarLancamento("Despesa Fora Periodo", LocalDate.of(2024, 6, 10), new BigDecimal("10000.00"),
+                TipoLancamento.DESPESA, "CatDespesa");
+
+        List<Lancamento> top10 = lancamentoRepository.buscarTopDespesasPorPeriodo(
+                LocalDate.of(2024, 5, 1),
+                LocalDate.of(2024, 5, 31),
+                PageRequest.of(0, 10));
+
+        assertEquals(10, top10.size());
+        assertEquals(TipoLancamento.DESPESA, top10.get(0).getTipo());
+        assertEquals(new BigDecimal("1200"), top10.get(0).getValor());
+        assertEquals(new BigDecimal("1100"), top10.get(1).getValor());
+        assertEquals(new BigDecimal("300"), top10.get(9).getValor());
+    }
+
     private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor) {
         criarLancamento(descricao, dataVencimento, valor, TipoLancamento.RECEITA, "Cat " + descricao.substring(0, 3));
     }
