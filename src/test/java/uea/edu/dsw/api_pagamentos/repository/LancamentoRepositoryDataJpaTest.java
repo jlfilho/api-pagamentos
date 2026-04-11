@@ -264,6 +264,48 @@ class LancamentoRepositoryDataJpaTest {
         assertEquals(0, totais.size());
     }
 
+    @Test
+    void deveSomarDespesasPagasPorMesNoPeriodo() {
+        criarLancamento("Despesa Jan 1", LocalDate.of(2024, 1, 5), LocalDate.of(2024, 1, 6), new BigDecimal("800.00"),
+                TipoLancamento.DESPESA, "Moradia");
+        criarLancamento("Despesa Jan 2", LocalDate.of(2024, 1, 20), LocalDate.of(2024, 1, 20), new BigDecimal("200.00"),
+                TipoLancamento.DESPESA, "Mercado");
+        criarLancamento("Despesa Fev", LocalDate.of(2024, 2, 10), LocalDate.of(2024, 2, 11), new BigDecimal("450.00"),
+                TipoLancamento.DESPESA, "Mercado");
+        criarLancamento("Despesa Nao Paga", LocalDate.of(2024, 2, 18), null, new BigDecimal("900.00"),
+                TipoLancamento.DESPESA, "Moradia");
+        criarLancamento("Receita Paga", LocalDate.of(2024, 2, 5), LocalDate.of(2024, 2, 6), new BigDecimal("300.00"),
+                TipoLancamento.RECEITA, "Salario");
+        criarLancamento("Despesa Fora Periodo", LocalDate.of(2024, 3, 3), LocalDate.of(2024, 3, 3), new BigDecimal("700.00"),
+                TipoLancamento.DESPESA, "Moradia");
+
+        List<MesTotalProjection> totais = lancamentoRepository.somarDespesasPagasPorMes(
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 2, 29));
+
+        assertEquals(2, totais.size());
+        assertEquals(2024, totais.get(0).getAno());
+        assertEquals(1, totais.get(0).getMes());
+        assertEquals(new BigDecimal("1000.00"), totais.get(0).getTotal());
+        assertEquals(2024, totais.get(1).getAno());
+        assertEquals(2, totais.get(1).getMes());
+        assertEquals(new BigDecimal("450.00"), totais.get(1).getTotal());
+    }
+
+    @Test
+    void deveRetornarVazioQuandoNaoHouverDespesasPagasNoPeriodo() {
+        criarLancamento("Despesa Nao Paga", LocalDate.of(2024, 1, 10), null, new BigDecimal("900.00"),
+                TipoLancamento.DESPESA, "Moradia");
+        criarLancamento("Receita Paga", LocalDate.of(2024, 1, 12), LocalDate.of(2024, 1, 12), new BigDecimal("300.00"),
+                TipoLancamento.RECEITA, "Salario");
+
+        List<MesTotalProjection> totais = lancamentoRepository.somarDespesasPagasPorMes(
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 31));
+
+        assertEquals(0, totais.size());
+    }
+
     private void criarLancamento(String descricao, LocalDate dataVencimento, BigDecimal valor) {
         criarLancamento(descricao, dataVencimento, valor, TipoLancamento.RECEITA, "Cat " + descricao.substring(0, 3));
     }
