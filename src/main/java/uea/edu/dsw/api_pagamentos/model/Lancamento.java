@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -24,7 +25,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "lancamento")
+@Table(name = "lancamento", indexes = {
+        @Index(name = "idx_lancamento_tipo_vencimento", columnList = "tipo,data_vencimento"),
+        @Index(name = "idx_lancamento_tipo_pagamento", columnList = "tipo,data_pagamento"),
+        @Index(name = "idx_lancamento_categoria", columnList = "categoria_codigo")
+})
 public class Lancamento {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
